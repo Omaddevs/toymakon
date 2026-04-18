@@ -114,6 +114,13 @@ html, body {
   color: var(--text-dark);
 }
 .header-location i { color: var(--accent); font-size: 20px; }
+.header-location--brand .header-brand-logo {
+  height: 34px;
+  width: auto;
+  max-width: min(160px, 45vw);
+  object-fit: contain;
+  display: block;
+}
 .icon-btn {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
