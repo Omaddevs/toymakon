@@ -70,7 +70,7 @@ html, body {
 .mobile-only { display: flex; }
 
 /* Utilities */
-.pad-x { padding-inline: 20px; width: 100%; max-width: 600px; /* limits width nicely on tablets too */}
+.pad-x { padding-left: 20px; padding-right: 20px; width: 100%; max-width: 600px; }
 .home-section { margin-top: 32px; width: 100%; display: flex; flex-direction: column; align-items: center; }
 .last-section { margin-bottom: 40px; }
 
@@ -78,7 +78,8 @@ html, body {
   display: flex;
   overflow-x: auto;
   gap: 16px;
-  padding-inline: 20px;
+  padding-left: 20px;
+  padding-right: 20px;
   padding-bottom: 12px; 
   scroll-snap-type: x mandatory;
   width: 100%;
@@ -122,7 +123,7 @@ html, body {
 }
 
 /* Search Bar */
-.search-section { padding: 0 20px; margin-bottom: 24px; margin-top: 10px; width: 100%; max-width: 600px; }
+.search-section { padding-left: 20px; padding-right: 20px; margin-bottom: 24px; margin-top: 10px; width: 100%; max-width: 600px; }
 .search-bar {
   display: flex;
   align-items: center;
@@ -428,8 +429,8 @@ html, body {
   .search-bar { max-width: 600px; margin: 0; padding: 12px 16px 12px 24px; }
   .search-bar input { font-size: 16px; }
   
-  .pad-x { padding-inline: 0; }
-  .horizontal-scroll { padding-inline: 0; }
+  .pad-x { padding-left: 0; padding-right: 0; }
+  .horizontal-scroll { padding-left: 0; padding-right: 0; }
   
   .banner-card { min-height: 240px; padding: 40px; }
   .banner-content h3 { font-size: 32px; max-width: 480px; }
