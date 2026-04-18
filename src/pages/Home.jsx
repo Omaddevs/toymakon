@@ -47,7 +47,7 @@ export default function Home() {
 
       {/* Barcha kategoriyalar (asosiy + qo‘shimcha) */}
       <section className="home-section">
-        <div className="section-header pad-x">
+        <div className="section-header">
           <h2>Asosiy xizmatlar</h2>
           <span
             className="see-all"
@@ -85,7 +85,7 @@ export default function Home() {
 
       {/* Featured Circular Vendors */}
       <section className="home-section">
-        <div className="section-header pad-x">
+        <div className="section-header">
           <h2>Top to‘yxonalar</h2>
           <span
             className="see-all"
@@ -118,7 +118,7 @@ export default function Home() {
 
       {/* Recommended Section Horizontal Scroll */}
       <section className="home-section">
-        <div className="section-header pad-x">
+        <div className="section-header">
           <h2>Tavsiya qilamiz</h2>
         </div>
         <div className="horizontal-scroll hide-scrollbar cards-row">
@@ -163,7 +163,7 @@ export default function Home() {
       </section>
 
       {/* Wedding planning helper section */}
-      <section className="home-section pad-x last-section">
+      <section className="home-section last-section">
         <div className="planning-box">
           <div className="planning-info">
             <h3>To‘y checklistingizni boshlang</h3>

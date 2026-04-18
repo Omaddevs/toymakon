@@ -18,7 +18,7 @@ export default function Search() {
           <span>Qidiruv</span>
         </div>
       </header>
-      <section className="home-section pad-x search-page">
+      <section className="home-section search-page">
         <div className="search-bar">
           <i className="ph ph-magnifying-glass search-icon"></i>
           <input

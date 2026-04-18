@@ -7,7 +7,7 @@ export default function Profile() {
           <span>Profil</span>
         </div>
       </header>
-      <section className="home-section pad-x">
+      <section className="home-section">
         <div className="section-header"><h2>Sizning profilingiz</h2></div>
         <p>Tez orada...</p>
       </section>

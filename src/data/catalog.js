@@ -99,6 +99,27 @@ export const VENDORS = [
     footerLine: '400 – 800 kishi',
     footerIcon: 'ph-users',
     phone: '+998 71 200 00 01',
+    rating: 4.8,
+    reviewCount: 26,
+    tagline: 'Zamonaviy zal, professional yoritma va ovoz — katta to‘ylar uchun.',
+    location: "Yunusobod tumani, Amir Temur shoh ko‘chasi 12",
+    telegram: 'versal_wedding',
+    reviews: [
+      {
+        id: 'r-versal-1',
+        author: 'Jasur',
+        rating: 5,
+        text: 'Zal juda chiroyli, ovoz va yoritma professional darajada. Tavsiya qilaman.',
+        date: '2025-10-18',
+      },
+      {
+        id: 'r-versal-2',
+        author: 'Madina',
+        rating: 4,
+        text: 'Mehmonlar bilan joy yetarli, menejerlar yordam berishdi.',
+        date: '2025-11-02',
+      },
+    ],
     description:
       "Zamonaviy zal, sahna yoritmasi va ovoz yechimi bilan to‘liq jihozlangan. Mehmonlar uchun alohida kirish va avtoturargoh mavjud.",
     specs: [
@@ -121,6 +142,20 @@ export const VENDORS = [
     footerLine: '300 – 600 kishi',
     footerIcon: 'ph-users',
     phone: '+998 71 200 00 02',
+    rating: 4.6,
+    reviewCount: 18,
+    tagline: 'Katta zal, VIP zonalar va LED — o‘rta va katta to‘ylar uchun.',
+    location: 'Chilonzor tumani, Bunyodkor ko‘chasi 45',
+    telegram: 'osiyo_grand',
+    reviews: [
+      {
+        id: 'r-osiyo-1',
+        author: 'Dilshod',
+        rating: 5,
+        text: 'LED ekran va zal dizayni zo‘r. Narxlari ham mos keldi.',
+        date: '2025-09-22',
+      },
+    ],
     description:
       'Katta zal va VIP xonalar. To‘y tartibi bo‘yicha maslahatchi va registrator xizmati mavjud.',
     specs: [
@@ -143,6 +178,12 @@ export const VENDORS = [
     footerLine: '200 – 450 kishi',
     footerIcon: 'ph-users',
     phone: '+998 71 200 00 03',
+    rating: 4.7,
+    reviewCount: 14,
+    tagline: 'Terrasa va zamonaviy interyer — kichik va o‘rta to‘ylar uchun.',
+    location: "Mirzo Ulug'bek tumani, Buyuk ipak yo‘li 88",
+    telegram: 'humo_event_uz',
+    reviews: [],
     description:
       "Yorqin interyer va ochiq havoda suratga olish maydonchasi. Kichik va o‘rta hajmdagi to‘ylar uchun qulay.",
     specs: [
@@ -486,6 +527,41 @@ export const VENDORS = [
     ],
   },
 ];
+
+function truncateDetailText(s, max) {
+  if (!s || typeof s !== 'string') return '';
+  const t = s.trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max - 1).trim()}…`;
+}
+
+/**
+ * Detail sahifa uchun: manzil, xarita havolasi, reyting, qisqa tarif, katalogdan kelgan sharhlar.
+ */
+export function enrichVendorForDetail(vendor) {
+  if (!vendor) return null;
+  const locSpec = vendor.specs?.find((x) => x.label === 'Joylashuv')?.value;
+  const displayLocation = vendor.location ?? locSpec ?? `${vendor.district} tumani, Toshkent`;
+  const q = encodeURIComponent(`${vendor.name}, ${displayLocation}`);
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${q}`;
+  const displayRating = typeof vendor.rating === 'number' ? vendor.rating : 4.5;
+  const displayReviewCount =
+    typeof vendor.reviewCount === 'number'
+      ? vendor.reviewCount
+      : 12 + ((vendor.name?.length ?? 0) + (vendor.id?.length ?? 0)) % 40;
+  const displayTagline = vendor.tagline ?? truncateDetailText(vendor.description, 115);
+  const catalogReviews = Array.isArray(vendor.reviews) ? vendor.reviews : [];
+
+  return {
+    ...vendor,
+    displayLocation,
+    mapsUrl,
+    displayRating,
+    displayReviewCount,
+    displayTagline,
+    catalogReviews,
+  };
+}
 
 export function getCategoryBySlug(slug) {
   return ALL_CATEGORIES.find((c) => c.slug === slug) ?? null;

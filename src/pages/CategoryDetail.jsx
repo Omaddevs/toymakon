@@ -19,7 +19,7 @@ export default function CategoryDetail() {
             <span>Topilmadi</span>
           </div>
         </header>
-        <section className="home-section pad-x">
+        <section className="home-section">
           <p className="muted-text">Bunday kategoriya yo‘q.</p>
           <button type="button" className="btn-primary" onClick={() => navigate('/category')}>
             Katalogga qaytish
@@ -41,12 +41,12 @@ export default function CategoryDetail() {
         </div>
       </header>
 
-      <div className="page-intro pad-x">
+      <div className="page-intro">
         <h1 className="page-title">{category.title}</h1>
         <p className="page-subtitle">{category.subtitle}</p>
       </div>
 
-      <section className="home-section pad-x">
+      <section className="home-section">
         <div className="section-header">
           <h2>Takliflar ({vendors.length})</h2>
         </div>
