@@ -70,8 +70,8 @@ html, body {
 .mobile-only { display: flex; }
 
 /* Utilities */
-.pad-x { padding-left: 20px; padding-right: 20px; width: 100%; }
-.home-section { margin-top: 32px; width: 100%; display: flex; flex-direction: column; align-items: stretch; }
+.pad-x { padding-right: 20px; width: 100%; }
+.home-section { margin-top: 32px; margin-left: 20px; width: 100%; display: flex; flex-direction: column; align-items: stretch; }
 .last-section { margin-bottom: 40px; }
 
 .horizontal-scroll {
