@@ -31,3 +31,44 @@ export function addUserReview(vendorId, { author, rating, text }) {
   localStorage.setItem(KEY, JSON.stringify(all));
   return entry;
 }
+
+export function getReviewsByUsername(username) {
+  const all = readAll();
+  const myReviews = [];
+  for (const [vendorId, reviews] of Object.entries(all)) {
+    if (!Array.isArray(reviews)) continue;
+    for (const r of reviews) {
+      if (r.author === username) {
+        myReviews.push({ vendorId, ...r });
+      }
+    }
+  }
+  return myReviews;
+}
+
+export function editUserReview(vendorId, reviewId, { rating, text }) {
+  const all = readAll();
+  if (!Array.isArray(all[vendorId])) return false;
+  let updated = false;
+  all[vendorId] = all[vendorId].map((r) => {
+    if (r.id === reviewId) {
+      updated = true;
+      return { ...r, rating, text };
+    }
+    return r;
+  });
+  if (updated) localStorage.setItem(KEY, JSON.stringify(all));
+  return updated;
+}
+
+export function deleteUserReview(vendorId, reviewId) {
+  const all = readAll();
+  if (!Array.isArray(all[vendorId])) return false;
+  const initLen = all[vendorId].length;
+  all[vendorId] = all[vendorId].filter((r) => r.id !== reviewId);
+  if (all[vendorId].length < initLen) {
+    localStorage.setItem(KEY, JSON.stringify(all));
+    return true;
+  }
+  return false;
+}

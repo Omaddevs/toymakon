@@ -1,12 +1,27 @@
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import CategoryIcon from '../components/CategoryIcon';
+import AuthGateSheet from '../components/AuthGateSheet';
+import { useAuth } from '../context/AuthContext';
 import { getCategoryBySlug, getVendorsByCategoryId } from '../data/catalog';
+import { isFavorite, toggleFavorite } from '../utils/favoritesStorage';
 
 export default function CategoryDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const category = getCategoryBySlug(slug);
   const vendors = category ? getVendorsByCategoryId(category.id) : [];
+  const [favTick, setFavTick] = useState(0);
+  const [authGateOpen, setAuthGateOpen] = useState(false);
+  const [authGateHint, setAuthGateHint] = useState('');
+  const afterAuthRef = useRef(null);
+
+  useEffect(() => {
+    const fn = () => setFavTick((t) => t + 1);
+    window.addEventListener('toymakon-favorites', fn);
+    return () => window.removeEventListener('toymakon-favorites', fn);
+  }, []);
 
   if (!category) {
     return (
@@ -28,6 +43,22 @@ export default function CategoryDetail() {
       </>
     );
   }
+
+  const handleLikeClick = (e, vendorId) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!user) {
+      afterAuthRef.current = () => {
+        toggleFavorite(vendorId);
+        setFavTick((t) => t + 1);
+      };
+      setAuthGateHint("Sevimlilarga qo'shish va like uchun avval tizimga kiring yoki ro'yxatdan o'ting.");
+      setAuthGateOpen(true);
+      return;
+    }
+    toggleFavorite(vendorId);
+    setFavTick((t) => t + 1);
+  };
 
   return (
     <>
@@ -64,11 +95,12 @@ export default function CategoryDetail() {
                 {v.badge ? <span className="card-badge">{v.badge}</span> : null}
                 <button
                   type="button"
-                  className="like-btn"
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label="Sevimlilar"
+                  className={`like-btn ${isFavorite(v.id) ? 'is-active' : ''}`}
+                  onClick={(e) => handleLikeClick(e, v.id)}
+                  aria-label={isFavorite(v.id) ? 'Sevimlilardan olib tashlash' : 'Sevimlilarga qo‘shish'}
+                  aria-pressed={isFavorite(v.id)}
                 >
-                  <i className="ph ph-heart"></i>
+                  <i className={isFavorite(v.id) ? 'ph-fill ph-heart' : 'ph-thin ph-heart'}></i>
                 </button>
                 <img src={v.image} alt={v.name} />
               </div>
@@ -84,12 +116,27 @@ export default function CategoryDetail() {
                   <span className="capacity">
                     <i className={`ph ${v.footerIcon}`}></i> {v.footerLine}
                   </span>
+                  <span className="card-views" title="Ko‘rishlar soni">
+                    <i className="ph ph-eye"></i> {v.reviewCount * 121 + 142}
+                  </span>
                 </div>
               </div>
             </div>
           ))}
         </div>
       </section>
+
+      <AuthGateSheet
+        open={authGateOpen}
+        onClose={() => setAuthGateOpen(false)}
+        hint={authGateHint}
+        onSuccess={() => {
+          setAuthGateOpen(false);
+          const cb = afterAuthRef.current;
+          afterAuthRef.current = null;
+          cb?.();
+        }}
+      />
     </>
   );
 }

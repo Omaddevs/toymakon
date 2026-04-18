@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import VendorHeroCarousel from '../components/VendorHeroCarousel';
 import { StarsDisplay, StarsInput } from '../components/StarRating';
+import AuthGateSheet from '../components/AuthGateSheet';
+import { useAuth } from '../context/AuthContext';
 import { enrichVendorForDetail, getVendorById, ALL_CATEGORIES } from '../data/catalog';
 import { isFavorite, toggleFavorite } from '../utils/favoritesStorage';
 import { addUserReview, getUserReviews } from '../utils/vendorReviewsStorage';
@@ -36,6 +38,8 @@ export default function Vendor() {
   const vendor = getVendorById(id);
   const category = vendor ? ALL_CATEGORIES.find((c) => c.id === vendor.categoryId) : null;
 
+  const { user } = useAuth();
+
   const [shareOpen, setShareOpen] = useState(false);
   const [toast, setToast] = useState('');
   const [requestOpen, setRequestOpen] = useState(false);
@@ -43,19 +47,24 @@ export default function Vendor() {
   const [reqPhone, setReqPhone] = useState('');
   const [reqMessage, setReqMessage] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
-  const [reviewAuthor, setReviewAuthor] = useState('');
   const [reviewText, setReviewText] = useState('');
   const [favTick, setFavTick] = useState(0);
+
+  // Auth gate
+  const [authGateOpen, setAuthGateOpen] = useState(false);
+  const [authGateHint, setAuthGateHint] = useState('');
+  const afterAuthRef = useRef(null); // callback to run after successful login
 
   const getShareUrl = () =>
     `${window.location.origin}/vendor/${encodeURIComponent(id ?? '')}`;
 
   useEffect(() => {
-    if (!shareOpen && !requestOpen) return undefined;
+    if (!shareOpen && !requestOpen && !authGateOpen) return undefined;
     const onKey = (e) => {
       if (e.key === 'Escape') {
         setShareOpen(false);
         setRequestOpen(false);
+        setAuthGateOpen(false);
       }
     };
     document.addEventListener('keydown', onKey);
@@ -65,7 +74,7 @@ export default function Vendor() {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [shareOpen, requestOpen]);
+  }, [shareOpen, requestOpen, authGateOpen]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -164,7 +173,7 @@ export default function Vendor() {
   const shareInstagram = async () => {
     const url = getShareUrl();
     await copyTextToClipboard(url);
-    showToast('Havola nusxalandi — Instagramda post yoki Storiesga qo‘shishingiz mumkin');
+    showToast("Havola nusxalandi — Instagramda post yoki Storiesga qo'shishingiz mumkin");
     closeShare();
   };
 
@@ -179,17 +188,37 @@ export default function Vendor() {
     ? `https://t.me/${String(vendor.telegram).replace(/^@/, '')}`
     : `https://t.me/share/url?text=${encodeURIComponent(`Salom! «${vendor.name}» bo‘yicha ma’lumot olmoqchiman.`)}`;
 
-  const onToggleFavorite = () => {
+  const doToggleFavorite = () => {
     const now = toggleFavorite(vendor.id);
     setFavTick((t) => t + 1);
-    showToast(now ? 'Sevimlilarga qo‘shildi' : 'Sevimlilardan olib tashlandi');
+    showToast(now ? "Sevimlilarga qo'shildi ❤️" : 'Sevimlilardan olib tashlandi');
+  };
+
+  const onToggleFavorite = () => {
+    if (!user) {
+      afterAuthRef.current = doToggleFavorite;
+      setAuthGateHint("Sevimlilar ro'yxatiga qo'shish uchun tizimga kiring.");
+      setAuthGateOpen(true);
+      return;
+    }
+    doToggleFavorite();
+  };
+
+  const openRequestModal = () => {
+    if (!user) {
+      afterAuthRef.current = () => setRequestOpen(true);
+      setAuthGateHint("So'rov yuborish uchun avval tizimga kiring yoki ro'yxatdan o'ting.");
+      setAuthGateOpen(true);
+      return;
+    }
+    setRequestOpen(true);
   };
 
   const submitRequest = (e) => {
     e.preventDefault();
     const msg = reqMessage.trim();
     if (msg.length < 8) {
-      showToast('So‘rov matni biroz batafsilroq bo‘lsin');
+      showToast("So'rov matni biroz batafsilroq bo'lsin");
       return;
     }
     saveRequest({
@@ -203,7 +232,16 @@ export default function Vendor() {
     setReqName('');
     setReqPhone('');
     setReqMessage('');
-    showToast('So‘rov qabul qilindi — tez orada aloqaga chiqamiz');
+    showToast("So'rov qabul qilindi — tez orada aloqaga chiqamiz");
+  };
+
+  const doSubmitReview = (text) => {
+    const authorName = user?.username || 'Foydalanuvchi';
+    addUserReview(vendor.id, { author: authorName, rating: reviewRating, text });
+    setUserReviews(getUserReviews(vendor.id));
+    setReviewText('');
+    setReviewRating(5);
+    showToast('Sharhingiz saqlandi — rahmat! ⭐');
   };
 
   const submitReview = (e) => {
@@ -213,16 +251,17 @@ export default function Vendor() {
       showToast('Izohni biroz uzunroq yozing');
       return;
     }
-    addUserReview(vendor.id, { author: reviewAuthor, rating: reviewRating, text });
-    setUserReviews(getUserReviews(vendor.id));
-    setReviewText('');
-    setReviewAuthor('');
-    setReviewRating(5);
-    showToast('Sharhingiz saqlandi — rahmat!');
+    if (!user) {
+      afterAuthRef.current = () => doSubmitReview(text);
+      setAuthGateHint("Sharhni saqlash uchun tizimga kiring yoki ro'yxatdan o'ting.");
+      setAuthGateOpen(true);
+      return;
+    }
+    doSubmitReview(text);
   };
 
   const nameLabel =
-    vendor.categoryId === 'venue' ? 'To‘yxona nomi' : `${category.shortLabel} nomi`;
+    vendor.categoryId === 'venue' ? "To'yxona nomi" : `${category.shortLabel} nomi`;
 
   return (
     <>
@@ -244,7 +283,7 @@ export default function Vendor() {
         </button>
       </header>
 
-      <VendorHeroCarousel images={allImages} badge={vendor.badge} name={vendor.name} />
+      <VendorHeroCarousel key={vendor.id} images={allImages} badge={vendor.badge} name={vendor.name} />
 
       <section className="vendor-detail">
         <p className="vendor-field-label">{nameLabel}</p>
@@ -317,7 +356,7 @@ export default function Vendor() {
           >
             <i className="ph ph-telegram-logo" aria-hidden /> Telegram
           </a>
-          <button type="button" className="btn-outline vendor-request-btn" onClick={() => setRequestOpen(true)}>
+          <button type="button" className="btn-outline vendor-request-btn" onClick={openRequestModal}>
             <i className="ph ph-chat-circle-dots" aria-hidden /> So‘rov yuborish
           </button>
           <button
@@ -326,8 +365,8 @@ export default function Vendor() {
             onClick={onToggleFavorite}
             aria-pressed={isFav}
           >
-            <i className={isFav ? 'ph ph-heart-fill' : 'ph ph-heart'} aria-hidden />
-            {isFav ? 'Sevimlilarda' : 'Sevimlilarga qo‘shish'}
+            <i className={isFav ? 'ph-fill ph-heart' : 'ph-thin ph-heart'} aria-hidden />
+            {isFav ? 'Sevimlilarda' : "Sevimlilarga qo'shish"}
           </button>
         </div>
 
@@ -349,22 +388,22 @@ export default function Vendor() {
               ))}
             </ul>
           ) : (
-            <p className="vendor-reviews-empty">Hozircha sharhlar yo‘q — birinchi bo‘lib qoldiring.</p>
+            <p className="vendor-reviews-empty">Hozircha sharhlar yo'q — birinchi bo'lib qoldiring.</p>
           )}
 
           <form className="vendor-review-form" onSubmit={submitReview}>
             <h3 className="vendor-review-form__title">Sharh qoldirish</h3>
-            <label className="vendor-review-form__label">
-              Ism (ixtiyoriy)
-              <input
-                type="text"
-                className="vendor-review-form__input"
-                value={reviewAuthor}
-                onChange={(e) => setReviewAuthor(e.target.value)}
-                placeholder="Masalan, Jasur"
-                maxLength={60}
-              />
-            </label>
+            {user ? (
+              <div className="vendor-review-form__author-row">
+                <i className="ph ph-user-circle vendor-review-author-icon" aria-hidden />
+                <span className="vendor-review-author-name">{user.username}</span>
+              </div>
+            ) : (
+              <p className="vendor-review-form__guest-hint">
+                <i className="ph ph-info" aria-hidden />
+                Baholash va izohni yozing. Yuborishda tizimga kirish yoki ro‘yxatdan o‘tish so‘raladi.
+              </p>
+            )}
             <span className="vendor-review-form__label">Baholash</span>
             <StarsInput value={reviewRating} onChange={setReviewRating} />
             <label className="vendor-review-form__label">
@@ -380,7 +419,7 @@ export default function Vendor() {
               />
             </label>
             <button type="submit" className="btn-primary vendor-review-form__submit">
-              Yuborish
+              {user ? 'Yuborish' : 'Tizimga kirib yuborish'}
             </button>
           </form>
         </div>
@@ -487,6 +526,18 @@ export default function Vendor() {
           </div>
         </>
       ) : null}
+
+      <AuthGateSheet
+        open={authGateOpen}
+        onClose={() => setAuthGateOpen(false)}
+        hint={authGateHint}
+        onSuccess={() => {
+          setAuthGateOpen(false);
+          const cb = afterAuthRef.current;
+          afterAuthRef.current = null;
+          cb?.();
+        }}
+      />
     </>
   );
 }

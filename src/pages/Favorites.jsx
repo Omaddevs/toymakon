@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AuthGateSheet from '../components/AuthGateSheet';
+import { useAuth } from '../context/AuthContext';
 import { getVendorById } from '../data/catalog';
-import { getFavoriteIds } from '../utils/favoritesStorage';
+import { getFavoriteIds, toggleFavorite, isFavorite } from '../utils/favoritesStorage';
 
 export default function Favorites() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [tick, setTick] = useState(0);
+  const [authGateOpen, setAuthGateOpen] = useState(false);
 
   useEffect(() => {
     const fn = () => setTick((t) => t + 1);
@@ -20,6 +24,39 @@ export default function Favorites() {
       .map((id) => getVendorById(id))
       .filter(Boolean);
   }, [tick]);
+
+  if (!user) {
+    return (
+      <>
+        <header className="mobile-header mobile-only">
+          <div className="header-location">
+            <i className="ph ph-heart"></i>
+            <span>Sevimlilar</span>
+          </div>
+        </header>
+        <section className="home-section last-section favorites-locked">
+          <div className="favorites-locked-card">
+            <div className="favorites-locked-icon" aria-hidden>
+              <i className="ph ph-lock"></i>
+            </div>
+            <h2 className="favorites-locked-title">Sevimlilar ro‘yxati</h2>
+            <p className="favorites-locked-text">
+              Saqlangan to‘yxonalar va xizmatlar shu yerda ko‘rinadi. Ro‘yxatdan o‘ting yoki tizimga kiring.
+            </p>
+            <button type="button" className="btn-primary favorites-locked-btn" onClick={() => setAuthGateOpen(true)}>
+              Kirish yoki ro‘yxatdan o‘tish
+            </button>
+          </div>
+        </section>
+        <AuthGateSheet
+          open={authGateOpen}
+          onClose={() => setAuthGateOpen(false)}
+          hint="Sevimlilarga qo‘shish va ro‘yxatni ko‘rish uchun hisob kerak."
+          onSuccess={() => setAuthGateOpen(false)}
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -47,6 +84,17 @@ export default function Favorites() {
                 onKeyDown={(e) => e.key === 'Enter' && navigate(`/vendor/${v.id}`)}
               >
                 <div className="card-img-wrap card-img-wrap--side">
+                  <button
+                    type="button"
+                    className={`like-btn ${isFavorite(v.id) ? 'is-active' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(v.id);
+                    }}
+                    aria-label="Sevimlilardan olib tashlash"
+                  >
+                    <i className={isFavorite(v.id) ? "ph-fill ph-heart" : "ph-thin ph-heart"} />
+                  </button>
                   <img src={v.image} alt="" />
                 </div>
                 <div className="card-body card-body--grow">
