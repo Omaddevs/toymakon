@@ -1,11 +1,11 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { getVendorById, PRIMARY_CATEGORIES } from '../data/catalog';
+import { getVendorById, ALL_CATEGORIES } from '../data/catalog';
 
 export default function Vendor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const vendor = getVendorById(id);
-  const category = vendor ? PRIMARY_CATEGORIES.find((c) => c.id === vendor.categoryId) : null;
+  const category = vendor ? ALL_CATEGORIES.find((c) => c.id === vendor.categoryId) : null;
 
   if (!vendor || !category) {
     return (

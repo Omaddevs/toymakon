@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import CategoryIcon from '../components/CategoryIcon';
 import { getCategoryBySlug, getVendorsByCategoryId } from '../data/catalog';
 
 export default function CategoryDetail() {
@@ -35,7 +36,7 @@ export default function CategoryDetail() {
           <i className="ph ph-arrow-left"></i>
         </button>
         <div className="header-location header-location--flex">
-          <i className={`ph ${category.icon}`}></i>
+          <CategoryIcon category={category} />
           <span className="header-title-truncate">{category.shortLabel}</span>
         </div>
       </header>

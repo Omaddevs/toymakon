@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { PRIMARY_CATEGORIES, getVendorsByCategoryId, VENDORS } from '../data/catalog';
+import PromoCarousel from '../components/PromoCarousel';
+import CategoryIcon from '../components/CategoryIcon';
+import { ALL_CATEGORIES, getVendorsByCategoryId, VENDORS } from '../data/catalog';
 
-const FEATURED_VENDOR_IDS = ['v-versal', 'v-azizov', 'v-royal'];
+const FEATURED_VENDOR_IDS = ['v-versal', 'v-azizov', 'v-bloom'];
 
 export default function Home() {
   const navigate = useNavigate();
@@ -30,7 +32,7 @@ export default function Home() {
           <i className="ph ph-magnifying-glass search-icon"></i>
           <input
             type="text"
-            placeholder="To‘yxona, foto, dekor qidiring"
+            placeholder="To‘yxona, FotoStudio, dekor, marry me..."
             onClick={() => navigate('/search')}
             readOnly
           />
@@ -40,7 +42,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Asosiy 3 kategoriya */}
+      {/* Barcha kategoriyalar (asosiy + qo‘shimcha) */}
       <section className="home-section">
         <div className="section-header pad-x">
           <h2>Asosiy xizmatlar</h2>
@@ -55,7 +57,7 @@ export default function Home() {
           </span>
         </div>
         <div className="horizontal-scroll hide-scrollbar primary-cats-scroll">
-          {PRIMARY_CATEGORIES.map((cat) => (
+          {ALL_CATEGORIES.map((cat) => (
             <div
               key={cat.id}
               className="category-chip category-chip--primary"
@@ -65,7 +67,7 @@ export default function Home() {
               onKeyDown={(e) => e.key === 'Enter' && navigate(`/category/${cat.slug}`)}
             >
               <div className="cat-icon cat-icon--accent">
-                <i className={`ph ${cat.icon}`}></i>
+                <CategoryIcon category={cat} />
               </div>
               <span className="category-chip-label">{cat.shortLabel}</span>
             </div>
@@ -73,18 +75,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Banners Carousel */}
-      <section className="home-section pad-x">
-        <div className="banner-card">
-          <div className="banner-content">
-            <span className="banner-badge">Yangi mavsum</span>
-            <h3>2026 mavsum uchun eng yaxshi to‘yxonalar</h3>
-            <button type="button" className="btn-primary" onClick={() => navigate('/category/toyxona')}>
-              Ko‘rish <i className="ph ph-arrow-right"></i>
-            </button>
-          </div>
-          <div className="banner-bg"></div>
-        </div>
+      {/* Reklama carousel */}
+      <section className="home-section">
+        <PromoCarousel />
       </section>
 
       {/* Featured Circular Vendors */}
@@ -149,7 +142,7 @@ export default function Home() {
               </div>
               <div className="card-body">
                 <div className="card-meta">
-                  {PRIMARY_CATEGORIES.find((c) => c.id === card.categoryId)?.shortLabel ?? ''} • {card.district}
+                  {ALL_CATEGORIES.find((c) => c.id === card.categoryId)?.shortLabel ?? ''} • {card.district}
                 </div>
                 <h4 className="card-title">{card.name}</h4>
                 <div className="card-price">
@@ -171,7 +164,7 @@ export default function Home() {
         <div className="planning-box">
           <div className="planning-info">
             <h3>To‘y checklistingizni boshlang</h3>
-            <p>Nimalar kerakligini bilmayapsizmi? Avvalo to‘yxona, keyin foto va dekor — katalogdan tanlang.</p>
+            <p>Nimalar kerakligini bilmayapsizmi? To‘yxona, FotoStudio, dekor, marry me, taklifnoma va boshqa xizmatlar — barchasi katalogda.</p>
             <button type="button" className="btn-outline" onClick={() => navigate('/category')}>
               Kategoriyalar <i className="ph ph-arrow-right"></i>
             </button>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PRIMARY_CATEGORIES, searchVendors } from '../data/catalog';
+import { ALL_CATEGORIES, searchVendors } from '../data/catalog';
 
 export default function Search() {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ export default function Search() {
           <i className="ph ph-magnifying-glass search-icon"></i>
           <input
             type="search"
-            placeholder="Masalan: to‘yxona, fotograf, dekor..."
+            placeholder="Masalan: to‘yxona, FotoStudio, dekor, marry me..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
@@ -31,9 +31,9 @@ export default function Search() {
         </div>
 
         <div className="search-quick">
-          <p className="search-quick-label">Tez tanlov</p>
+          <p className="search-quick-label">Kategoriyalar</p>
           <div className="search-chips">
-            {PRIMARY_CATEGORIES.map((c) => (
+            {ALL_CATEGORIES.map((c) => (
               <button key={c.id} type="button" className="search-chip" onClick={() => navigate(`/category/${c.slug}`)}>
                 {c.shortLabel}
               </button>
@@ -46,7 +46,7 @@ export default function Search() {
         </div>
         <div className="listing-stack">
           {results.map((v) => {
-            const cat = PRIMARY_CATEGORIES.find((c) => c.id === v.categoryId);
+            const cat = ALL_CATEGORIES.find((c) => c.id === v.categoryId);
             return (
               <div
                 key={v.id}

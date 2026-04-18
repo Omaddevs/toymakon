@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { PRIMARY_CATEGORIES } from '../data/catalog';
+import CategoryIcon from '../components/CategoryIcon';
+import { ALL_CATEGORIES } from '../data/catalog';
 
 export default function Category() {
   const navigate = useNavigate();
@@ -15,15 +16,15 @@ export default function Category() {
 
       <section className="home-section pad-x">
         <div className="section-header">
-          <h2>Asosiy yo‘nalishlar</h2>
+          <h2>Barcha kategoriyalar</h2>
         </div>
         <p className="page-subtitle page-subtitle--tight">
-          Eng ko‘p qidiriladigan uchta xizmat — tanlang, keyin takliflarni solishtiring.
+          To‘yxonadan tortib taklifnoma va tamadagacha — bitta ro‘yxatdan tanlang.
         </p>
       </section>
 
       <section className="primary-categories-block pad-x">
-        {PRIMARY_CATEGORIES.map((c) => (
+        {ALL_CATEGORIES.map((c) => (
           <button
             key={c.id}
             type="button"
@@ -31,7 +32,7 @@ export default function Category() {
             onClick={() => navigate(`/category/${c.slug}`)}
           >
             <div className="primary-category-card__icon">
-              <i className={`ph ${c.icon}`}></i>
+              <CategoryIcon category={c} />
             </div>
             <div className="primary-category-card__text">
               <span className="primary-category-card__title">{c.title}</span>

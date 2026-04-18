@@ -71,7 +71,17 @@ html, body {
 
 /* Utilities */
 .pad-x { padding-right: 20px; width: 100%; }
-.home-section { margin-top: 32px; margin-left: 20px; width: 100%; display: flex; flex-direction: column; align-items: stretch; }
+.home-section {
+  margin-top: 32px;
+  margin-left: 20px;
+  margin-right: 20px;
+  width: calc(100% - 40px);
+  max-width: calc(100vw - 40px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
 .last-section { margin-bottom: 40px; }
 
 .horizontal-scroll {
@@ -177,7 +187,7 @@ html, body {
   width: 68px;
   height: 68px;
   border-radius: var(--radius-full);
-  background: var(--bg-surface);
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -186,6 +196,7 @@ html, body {
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
   transition: all 0.3s ease;
+  overflow: hidden;
 }
 .category-chip span { font-size: 13px; font-weight: 500; color: var(--text-dark); white-space: nowrap; }
 
@@ -235,9 +246,62 @@ html, body {
   bottom: 0;
   width: 140px;
   height: 140px;
-  background: url('https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=400&q=80') center/cover;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
   border-top-left-radius: 100px;
   opacity: 0.95;
+}
+
+/* Reklama carousel — avtomatik slayd */
+.promo-carousel {
+  width: 100%;
+  max-width: 100%;
+}
+.promo-carousel-viewport {
+  overflow: hidden;
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+.promo-carousel-track {
+  display: flex;
+  flex-direction: row;
+  will-change: transform;
+}
+.promo-carousel-slide {
+  min-width: 100%;
+  flex: 0 0 100%;
+  box-sizing: border-box;
+}
+.promo-carousel-slide .banner-card {
+  width: 100%;
+  margin: 0;
+}
+.promo-carousel-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 0 4px;
+}
+.promo-carousel-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--border-color);
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s, width 0.25s;
+}
+.promo-carousel-dot.is-active {
+  background: var(--accent);
+  width: 22px;
+}
+.promo-carousel-dot:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Featured Circles Row */
@@ -424,6 +488,13 @@ html, body {
   .search-section, .pad-x, .horizontal-scroll, .home-section, .mobile-header {
     max-width: 100%;
   }
+
+  .home-section {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+    max-width: 100%;
+  }
   
   .search-section { margin-bottom: 40px; margin-top: 0; padding: 0; display: flex; justify-content: flex-start; }
   .search-bar { max-width: 600px; margin: 0; padding: 12px 16px 12px 24px; }
@@ -525,13 +596,15 @@ html, body {
   width: 56px;
   height: 56px;
   border-radius: var(--radius-md);
-  background: var(--primary-light);
+  background: #ffffff;
+  border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 28px;
   color: var(--accent);
   flex-shrink: 0;
+  overflow: hidden;
 }
 .primary-category-card__text {
   flex: 1;
@@ -562,9 +635,10 @@ html, body {
   padding-right: 20px;
 }
 .category-chip--primary .cat-icon--accent {
-  background: linear-gradient(145deg, var(--primary-light), var(--bg-surface));
+  background: #ffffff;
   color: var(--accent);
   border-color: var(--primary);
+  border-width: 1.5px;
 }
 .category-chip-label {
   font-size: 12px;
@@ -675,6 +749,9 @@ html, body {
   color: var(--text-muted);
   margin-bottom: 10px;
 }
+.search-quick-label--second {
+  margin-top: 16px;
+}
 .search-chips {
   display: flex;
   flex-wrap: wrap;
@@ -694,6 +771,23 @@ html, body {
 .search-chip:hover {
   border-color: var(--primary);
   background: var(--primary-light);
+}
+.search-chip--muted {
+  background: var(--bg-main);
+  font-weight: 500;
+}
+
+.category-extra-section {
+  margin-top: 8px;
+}
+
+.primary-category-card--secondary {
+  border-style: solid;
+  background: linear-gradient(180deg, var(--bg-surface) 0%, var(--secondary) 100%);
+}
+.primary-category-card__icon--muted {
+  background: var(--bg-main);
+  color: var(--text-dark);
 }
 
 .service-card--horizontal {

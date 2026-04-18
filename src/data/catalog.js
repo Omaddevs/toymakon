@@ -1,4 +1,4 @@
-/** Asosiy 3 ta yo‘nalish — katalog va qidiruv shu sluglar bo‘yicha ishlaydi */
+/** Asosiy yo‘nalishlar — bosh sahifada birinchi qatorda */
 export const PRIMARY_CATEGORIES = [
   {
     id: 'venue',
@@ -11,25 +11,75 @@ export const PRIMARY_CATEGORIES = [
   },
   {
     id: 'media',
-    slug: 'foto-video',
-    title: 'Fotograf / videograf topib berish',
-    shortLabel: 'Foto / video',
+    slug: 'fotostudio',
+    title: 'FotoStudio — fotograf va videograf',
+    shortLabel: 'FotoStudio',
     subtitle: 'To‘y, love story, operator va montaj',
     icon: 'ph-camera',
-    searchHint: 'Fotograf, videograf, studio',
+    searchHint: 'FotoStudio, fotograf, videograf, studio',
   },
   {
     id: 'decor',
     slug: 'dekor',
-    title: 'Dekor / marry me joy topib berish',
-    shortLabel: 'Dekor / Marry me',
-    subtitle: 'Zal bezatish, marry me, fotozona',
-    icon: 'ph-sparkle',
-    searchHint: 'Dekor, marry me, arxa fon',
+    title: 'Dekor va zal bezatish',
+    shortLabel: 'Dekor',
+    subtitle: 'Archa, fon, stol, fotozona, LED',
+    icon: 'ph-confetti',
+    searchHint: 'Dekor, zal, archa, gullar, LED',
+  },
+  {
+    id: 'marryme',
+    slug: 'marry-me',
+    title: 'Marry me joy va taklif',
+    shortLabel: 'Marry me',
+    subtitle: 'Taklif maydoni, bezatish, joy, sxema',
+    icon: 'ph-heart',
+    searchHint: 'Marry me, taklif, romantik joy, engagement',
   },
 ];
 
-const cat = (slug) => PRIMARY_CATEGORIES.find((c) => c.slug === slug);
+/** Qo‘shimcha kategoriyalar — katalogda va bosh sahifada ikkinchi qatorda */
+export const EXTRA_CATEGORIES = [
+  {
+    id: 'invitation',
+    slug: 'taklifnoma',
+    title: 'Taklifnoma va poligrafiya',
+    shortLabel: 'Taklifnoma',
+    subtitle: 'Dizayn, bosma, lazerniy kesish, onlayn taklif',
+    icon: 'ph-envelope-open',
+    searchHint: 'Taklifnoma, qog‘oz, bosma, kartochka',
+  },
+  {
+    id: 'attire',
+    slug: 'liboslar',
+    title: 'Kelin va kuyov liboslari',
+    shortLabel: 'Liboslar',
+    subtitle: 'Ijaraga yoki sotuv, milliy va klassik',
+    icon: 'ph-dress',
+    searchHint: 'Libos, kelin, kuyov, milliy kiyim',
+  },
+  {
+    id: 'transport',
+    slug: 'avto',
+    title: 'To‘y avto va transfer',
+    shortLabel: 'Avto xizmat',
+    subtitle: 'Retro, limuzin, VIP transfer, konvoy',
+    icon: 'ph-car-profile',
+    searchHint: 'Avto, limuzin, transfer, retro mashina',
+  },
+  {
+    id: 'mc',
+    slug: 'tamada',
+    title: 'Tamada va dastur boshlovchisi',
+    shortLabel: 'Tamada',
+    subtitle: 'O‘zbek va rus tilida, jonli dastur',
+    icon: 'ph-microphone-stage',
+    searchHint: 'Tamada, vedushchi, dastur, o‘yinlar',
+  },
+];
+
+/** Barcha kategoriyalar — slug va qidiruv */
+export const ALL_CATEGORIES = [...PRIMARY_CATEGORIES, ...EXTRA_CATEGORIES];
 
 export const VENDORS = [
   {
@@ -186,16 +236,16 @@ export const VENDORS = [
     footerIcon: 'ph-flower',
     phone: '+998 94 456 78 90',
     description:
-      'Klassik va zamonaviy bezatish: archa, fon, stol dekoratsiyasi. Marry me zonasi va fotowall alohida loyiha.',
+      'Klassik va zamonaviy bezatish: archa, fon, stol dekoratsiyasi, fotowall. Jonli gullar, mato va LED yechimlari.',
     specs: [
-      { label: 'Yo‘nalish', value: 'Zal dekor, fotozona' },
-      { label: 'Marry me', value: 'Park / roof / studiya' },
+      { label: 'Yo‘nalish', value: 'Zal, kirish, sahna' },
+      { label: 'Fotozona', value: 'Arxa fon, studiya' },
       { label: 'Material', value: 'Jonli gullar, mato, LED' },
     ],
   },
   {
     id: 'v-bloom',
-    categoryId: 'decor',
+    categoryId: 'marryme',
     slug: 'bloom-marry',
     name: 'Bloom Marry Me',
     district: 'Yunusobod',
@@ -210,9 +260,31 @@ export const VENDORS = [
     description:
       "Taklif uchun tayyor joylar: botanika bog‘i, tom, studiya. So‘zlarni yozish, muzika va suratga olish rejasi.",
     specs: [
-      { label: 'Marry me', value: 'Joy tanlash, sxema' },
+      { label: 'Taklif', value: 'Joy tanlash, sxema' },
       { label: 'Vaqt', value: 'Kechqurun / ertalab' },
       { label: 'Bonus', value: 'Qisqa video clip' },
+    ],
+  },
+  {
+    id: 'v-marry-roof',
+    categoryId: 'marryme',
+    slug: 'skyline-marry',
+    name: 'Skyline Marry Me',
+    district: 'Toshkent',
+    image: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80',
+    gallery: [],
+    priceLabel: "3 600 000 so'm",
+    priceNote: 'tom + bezatish',
+    badge: 'Yangi',
+    footerLine: 'Panorama + gullar',
+    footerIcon: 'ph-heart',
+    phone: '+998 98 700 55 03',
+    description:
+      'Tom va terasalarda marry me: yoritish, gullar, privat zonalar. Xavfsizlik va muzika bilan.',
+    specs: [
+      { label: 'Joy', value: 'Tom, loft, botanika' },
+      { label: 'Vaqt', value: 'Quyosh botishi bloklari' },
+      { label: 'Qo‘shimcha', value: 'Saxna yoritmasi' },
     ],
   },
   {
@@ -237,10 +309,186 @@ export const VENDORS = [
       { label: 'Muddat', value: 'O‘rnatish 1 kun' },
     ],
   },
+  {
+    id: 'v-invite-lux',
+    categoryId: 'invitation',
+    slug: 'invite-lux-print',
+    name: 'Lux Print Studio',
+    district: 'Yakkasaroy',
+    image: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=800&q=80',
+    gallery: ['https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80'],
+    priceLabel: "800 000 so'm",
+    priceNote: '100 ta taklifnoma',
+    badge: 'Top',
+    footerLine: 'Dizayn + bosma',
+    footerIcon: 'ph-palette',
+    phone: '+998 71 300 10 01',
+    description:
+      'Individual dizayn, qog‘oz tanlash, folga va lazerniy kesish. Namuna va muddati kelish vaqti kelishuv bilan.',
+    specs: [
+      { label: 'Format', value: 'Kvadrat, vertikal, onlayn' },
+      { label: 'Muddat', value: '7–14 kun' },
+      { label: 'Bonus', value: 'Rasmiy dasturcha kartochkasi' },
+    ],
+  },
+  {
+    id: 'v-paper-joy',
+    categoryId: 'invitation',
+    slug: 'paper-joy',
+    name: 'Paper Joy',
+    district: 'Chilonzor',
+    image: 'https://images.unsplash.com/photo-1606800052052-a09a3b91e17a?auto=format&fit=crop&w=800&q=80',
+    gallery: [],
+    priceLabel: "500 000 so'm",
+    priceNote: 'minimal paket',
+    badge: null,
+    footerLine: 'Ekologik qog‘oz',
+    footerIcon: 'ph-leaf',
+    phone: '+998 71 300 10 02',
+    description:
+      'Minimal va ekologik qog‘ozda taklifnomalar. QR orqali joy va vaqtni tasdiqlash.',
+    specs: [
+      { label: 'Uslub', value: 'Minimal, botanika' },
+      { label: 'Yetkazish', value: 'Toshkent bo‘ylab' },
+      { label: 'Qo‘shimcha', value: 'Konvert choplash' },
+    ],
+  },
+  {
+    id: 'v-dress-vogue',
+    categoryId: 'attire',
+    slug: 'vogue-atelier',
+    name: 'Vogue Atelier',
+    district: "Mirzo Ulug'bek",
+    image: 'https://images.unsplash.com/photo-1594552077729-2e8e0c7d8c8c?auto=format&fit=crop&w=800&q=80',
+    gallery: ['https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80'],
+    priceLabel: "15 000 000 so'm",
+    priceNote: 'ijaraga',
+    badge: 'Premium',
+    footerLine: 'Kelin + aksessuar',
+    footerIcon: 'ph-sparkle',
+    phone: '+998 90 400 20 01',
+    description:
+      'Yevropa va turk dizaynerlari kolleksiyasi. 3 marta probalar, o‘lcham tuzatish va aksessuarlar.',
+    specs: [
+      { label: 'Ijaraga', value: '3 kun + uzaytirish' },
+      { label: 'O‘lcham', value: 'XS – XL' },
+      { label: 'Qo‘shimcha', value: 'Fata, poyabzal maslahat' },
+    ],
+  },
+  {
+    id: 'v-national-suite',
+    categoryId: 'attire',
+    slug: 'milliy-salon',
+    name: 'Milliy Libos Salon',
+    district: 'Yunusobod',
+    image: 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&w=800&q=80',
+    gallery: [],
+    priceLabel: "8 000 000 so'm",
+    priceNote: 'to‘plam',
+    badge: null,
+    footerLine: 'Kelin + kuyov',
+    footerIcon: 'ph-users',
+    phone: '+998 91 400 20 02',
+    description:
+      'Milliy atlas va adrasdan to‘liq to‘plam: kelin, kuyov va ota-ona kiyimlari. Shaxsiy tikuvchi.',
+    specs: [
+      { label: 'Material', value: 'Atlas, adras, ipak' },
+      { label: 'Muddat', value: '30–45 kun' },
+      { label: 'Joy', value: 'Salon + uyga chiqish' },
+    ],
+  },
+  {
+    id: 'v-limo-city',
+    categoryId: 'transport',
+    slug: 'limo-city',
+    name: 'Limo City',
+    district: 'Shayxontohur',
+    image: 'https://images.unsplash.com/photo-1563720223185-11003d46daa4?auto=format&fit=crop&w=800&q=80',
+    gallery: [],
+    priceLabel: "2 500 000 so'm",
+    priceNote: '4 soat',
+    badge: 'Top',
+    footerLine: 'Limuzin 8 o‘rin',
+    footerIcon: 'ph-car',
+    phone: '+998 93 500 30 01',
+    description:
+      'Qora va oq limuzinlar, ichki dekor va muzika. Haydovchi libosi va marshrut rejalashtirish.',
+    specs: [
+      { label: 'Avto', value: 'Lincoln, Chrysler' },
+      { label: 'Vaqt', value: '4 soatdan' },
+      { label: 'Bonus', value: 'Gullar va sharlar' },
+    ],
+  },
+  {
+    id: 'v-retro-wedding',
+    categoryId: 'transport',
+    slug: 'retro-wedding-cars',
+    name: 'Retro Wedding Cars',
+    district: 'Sergeli',
+    image: 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=800&q=80',
+    gallery: [],
+    priceLabel: "1 800 000 so'm",
+    priceNote: 'retro paket',
+    badge: null,
+    footerLine: 'Gaz-21, ZIL',
+    footerIcon: 'ph-steering-wheel',
+    phone: '+998 94 500 30 02',
+    description:
+      'Sovet retro avtomobillari: foto va videoga tayyor. Konvoy (2–3 ta mashina) chegirma.',
+    specs: [
+      { label: 'Model', value: 'Gaz-21, Volga, ZIL' },
+      { label: 'Marshrut', value: 'Shahar ichida' },
+      { label: 'Qo‘shimcha', value: 'Haydovchi kostyumi' },
+    ],
+  },
+  {
+    id: 'v-tamada-bobur',
+    categoryId: 'mc',
+    slug: 'tamada-bobur',
+    name: 'Bobur Karimov',
+    district: 'Toshkent',
+    image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=800&q=80',
+    gallery: [],
+    priceLabel: "5 000 000 so'm",
+    priceNote: 'to‘liq kecha',
+    badge: 'Top',
+    footerLine: '15 yillik tajriba',
+    footerIcon: 'ph-microphone',
+    phone: '+998 95 600 40 01',
+    description:
+      'O‘zbek va rus tillarida dastur: o‘yinlar, raqs, tanishuv marosimi. Ovoz va yoritish bilan keladi.',
+    specs: [
+      { label: 'Tillar', value: 'O‘zbek, rus' },
+      { label: 'Dastur', value: 'Individual reja' },
+      { label: 'Qo‘shimcha', value: 'DJ bilan hamkorlik' },
+    ],
+  },
+  {
+    id: 'v-mc-lola',
+    categoryId: 'mc',
+    slug: 'mc-lola',
+    name: 'Lola — vedushchi',
+    district: 'Toshkent',
+    image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80',
+    gallery: [],
+    priceLabel: "4 200 000 so'm",
+    priceNote: 'kechki dastur',
+    badge: null,
+    footerLine: 'Zamonaviy to‘ylar',
+    footerIcon: 'ph-heart',
+    phone: '+998 97 600 40 02',
+    description:
+      'Yosh juftlar uchun zamonaviy dastur: interaktiv o‘yinlar, foto-zona boshqaruvi, ingliz tilida qisqa blok.',
+    specs: [
+      { label: 'Uslub', value: 'Zamonaviy, yengil' },
+      { label: 'Tillar', value: 'O‘zbek, ingliz' },
+      { label: 'Bonus', value: 'Repetitsiya uchrashuvi' },
+    ],
+  },
 ];
 
 export function getCategoryBySlug(slug) {
-  return PRIMARY_CATEGORIES.find((c) => c.slug === slug) ?? null;
+  return ALL_CATEGORIES.find((c) => c.slug === slug) ?? null;
 }
 
 export function getVendorsByCategoryId(categoryId) {
@@ -255,7 +503,7 @@ export function searchVendors(query) {
   const q = (query || '').trim().toLowerCase();
   if (!q) return VENDORS;
   return VENDORS.filter((v) => {
-    const cat = PRIMARY_CATEGORIES.find((c) => c.id === v.categoryId);
+    const cat = ALL_CATEGORIES.find((c) => c.id === v.categoryId);
     const hay = `${v.name} ${v.district} ${cat?.title ?? ''} ${cat?.searchHint ?? ''}`.toLowerCase();
     return hay.includes(q);
   });
