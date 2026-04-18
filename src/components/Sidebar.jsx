@@ -3,8 +3,9 @@ import { NavLink } from 'react-router-dom';
 export default function Sidebar() {
   return (
     <aside className="sidebar desktop-only">
-      <div className="logo">
-        <i className="ph ph-rings"></i> ToyMakon
+      <div className="logo logo--with-wordmark" aria-label="ToyMakon">
+        <img src="/logo-rings.png" alt="" className="sidebar-logo sidebar-logo--rings" />
+        <span className="sidebar-wordmark">ToyMakon</span>
       </div>
       <nav className="nav-vertical">
         <NavLink to="/" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>

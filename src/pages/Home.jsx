@@ -14,9 +14,13 @@ export default function Home() {
     <>
       {/* Mobile Header */}
       <header className="mobile-header mobile-only">
-        <div className="header-location header-location--brand">
-          <img src="/logo.png" alt="ToyMakon" className="header-brand-logo" />
-          <i className="ph ph-caret-down" aria-hidden></i>
+        <div className="header-location header-location--brand" aria-label="ToyMakon">
+          <img
+            src="/logo-rings.png"
+            alt=""
+            className="header-brand-logo header-brand-logo--rings"
+          />
+          <span className="header-wordmark">ToyMakon</span>
         </div>
         <div className="header-actions">
           <button type="button" className="icon-btn" aria-label="Bildirishnomalar">
