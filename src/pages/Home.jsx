@@ -27,7 +27,7 @@ export default function Home() {
       </div>
 
       {/* Categories Row */}
-      <section className="home-section pad-x-desktop">
+      <section className="home-section pad-x">
         <div className="horizontal-scroll hide-scrollbar">
           {[
             { icon: "ph-buildings", label: "To‘yxonalar" },
