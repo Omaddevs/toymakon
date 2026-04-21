@@ -9,6 +9,7 @@ import Vendor from './pages/Vendor';
 import Favorites from './pages/Favorites';
 import Profile from './pages/Profile';
 import Search from './pages/Search';
+import TopVenuesManager from './pages/TopVenuesManager';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
               <Route path="/vendor/:id" element={<Vendor />} />
               <Route path="/favorites" element={<Favorites />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/top-venues" element={<TopVenuesManager />} />
               <Route path="/search" element={<Search />} />
             </Routes>
           </main>

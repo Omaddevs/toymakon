@@ -10,6 +10,36 @@ import { isFavorite, toggleFavorite } from '../utils/favoritesStorage';
 
 const EMPTY_MSG = 'Ma’lumotlar hozircha yo‘q';
 
+function extractYoutubeVideoId(rawUrl) {
+  if (!rawUrl) return '';
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return '';
+  }
+  const host = url.hostname.replace(/^www\./, '');
+  if (host === 'youtu.be') return url.pathname.replace('/', '').trim();
+  if (host === 'youtube.com' || host === 'm.youtube.com') {
+    if (url.pathname.startsWith('/shorts/')) return url.pathname.split('/')[2] || '';
+    if (url.pathname.startsWith('/embed/')) return url.pathname.split('/')[2] || '';
+    return url.searchParams.get('v') || '';
+  }
+  return '';
+}
+
+function youtubeEmbedUrl(rawUrl) {
+  const videoId = extractYoutubeVideoId(rawUrl);
+  if (!videoId) return '';
+  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0&modestbranding=1&controls=1`;
+}
+
+function youtubePosterUrl(rawUrl) {
+  const videoId = extractYoutubeVideoId(rawUrl);
+  if (!videoId) return '';
+  return `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/hqdefault.jpg`;
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -23,6 +53,8 @@ export default function Home() {
   const [error, setError] = useState('');
   const [home, setHome] = useState(null);
   const [vendorsByCategory, setVendorsByCategory] = useState({});
+  const [storyVideo, setStoryVideo] = useState(null);
+  const [storyPlaying, setStoryPlaying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +101,24 @@ export default function Home() {
     return () => window.removeEventListener('toymakon-favorites', fn);
   }, []);
 
+  useEffect(() => {
+    if (!storyVideo) return undefined;
+    const originalOverflow = document.body.style.overflow;
+    const closeOnEsc = (e) => {
+      if (e.key === 'Escape') setStoryVideo(null);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEsc);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', closeOnEsc);
+    };
+  }, [storyVideo]);
+
+  useEffect(() => {
+    if (!storyVideo) setStoryPlaying(false);
+  }, [storyVideo]);
+
   const openNotifications = () => {
     if (!user) {
       afterAuthRef.current = () => openInbox();
@@ -96,6 +146,8 @@ export default function Home() {
   };
 
   const viewCount = (v) => (typeof v.reviewCount === 'number' ? v.reviewCount * 121 + 142 : 0);
+  const storyEmbed = youtubeEmbedUrl(storyVideo?.storyVideoUrl);
+  const storyPoster = youtubePosterUrl(storyVideo?.storyVideoUrl);
 
   if (loading) {
     return (
@@ -233,13 +285,25 @@ export default function Home() {
               <div
                 key={story.id}
                 className="story-item"
-                onClick={() => navigate(`/vendor/${story.id}`)}
+                onClick={() => {
+                  if (!story.storyVideoUrl) return;
+                  setStoryVideo(story);
+                }}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && navigate(`/vendor/${story.id}`)}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return;
+                  if (!story.storyVideoUrl) return;
+                  setStoryVideo(story);
+                }}
               >
                 <div className="story-ring">
                   <img src={story.image} alt={story.name} />
+                  {story.storyVideoUrl ? (
+                    <span className="story-play" aria-hidden>
+                      <i className="ph-fill ph-play"></i>
+                    </span>
+                  ) : null}
                 </div>
                 <span className="story-name">{story.name}</span>
               </div>
@@ -377,6 +441,41 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {storyVideo && storyEmbed ? (
+        <div className="story-video-overlay" role="dialog" aria-modal="true" aria-label={`${storyVideo.name} story`}>
+          <button type="button" className="story-video-backdrop" aria-label="Yopish" onClick={() => setStoryVideo(null)} />
+          <div className="story-video-modal">
+            <button type="button" className="story-video-back" onClick={() => setStoryVideo(null)} aria-label="Orqaga">
+              <i className="ph ph-arrow-left"></i>
+              Orqaga
+            </button>
+            <div className="story-video-frame-wrap">
+              {!storyPlaying ? (
+                <button
+                  type="button"
+                  className="story-video-poster"
+                  aria-label="Videoni boshlash"
+                  onClick={() => setStoryPlaying(true)}
+                >
+                  {storyPoster ? <img src={storyPoster} alt={storyVideo.name} /> : null}
+                  <span className="story-video-poster-play" aria-hidden>
+                    <i className="ph-fill ph-play"></i>
+                  </span>
+                </button>
+              ) : (
+                <iframe
+                  src={storyEmbed}
+                  title={`${storyVideo.name} video`}
+                  allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                  allowFullScreen
+                />
+              )}
+            </div>
+            <div className="story-video-title">{storyVideo.name}</div>
+          </div>
+        </div>
+      ) : null}
 
       <AuthGateSheet
         open={authGateOpen}

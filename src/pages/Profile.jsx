@@ -156,6 +156,16 @@ export default function Profile() {
                 <span>Yordam qidirish</span>
                 <i className="ph ph-caret-right profile-menu-chev"></i>
               </button>
+
+              {user?.is_staff ? (
+                <button type="button" className="profile-menu-item" onClick={() => navigate('/profile/top-venues')}>
+                  <div className="profile-menu-icon" style={{ color: 'var(--primary)' }}>
+                    <i className="ph ph-sliders"></i>
+                  </div>
+                  <span>Top to‘yxonalarni boshqarish</span>
+                  <i className="ph ph-caret-right profile-menu-chev"></i>
+                </button>
+              ) : null}
             </div>
 
             <button type="button" className="btn-outline auth-logout-btn" onClick={logout}>
