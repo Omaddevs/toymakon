@@ -4,7 +4,8 @@ import VendorHeroCarousel from '../components/VendorHeroCarousel';
 import { StarsDisplay, StarsInput } from '../components/StarRating';
 import AuthGateSheet from '../components/AuthGateSheet';
 import { useAuth } from '../context/AuthContext';
-import { enrichVendorForDetail, getVendorById, ALL_CATEGORIES } from '../data/catalog';
+import { enrichVendorForDetail } from '../data/catalog';
+import { fetchCategories, fetchVendorByCode } from '../utils/catalogApi';
 import { isFavorite, toggleFavorite } from '../utils/favoritesStorage';
 import { addUserReview, getUserReviews } from '../utils/vendorReviewsStorage';
 import { saveRequest } from '../utils/vendorRequestsStorage';
@@ -35,10 +36,40 @@ async function copyTextToClipboard(text) {
 export default function Vendor() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const vendor = getVendorById(id);
-  const category = vendor ? ALL_CATEGORIES.find((c) => c.id === vendor.categoryId) : null;
+  const [vendor, setVendor] = useState(null);
+  const [category, setCategory] = useState(null);
+  const [pageState, setPageState] = useState('loading');
 
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (!id) {
+      setPageState('notfound');
+      return;
+    }
+    let cancelled = false;
+    setPageState('loading');
+    setVendor(null);
+    setCategory(null);
+    (async () => {
+      try {
+        const v = await fetchVendorByCode(id);
+        const cats = await fetchCategories();
+        if (cancelled) return;
+        setVendor(v);
+        const cat = cats.find((c) => c.id === v.categoryId);
+        setCategory(cat ?? { id: v.categoryId, shortLabel: v.categoryId, slug: '', title: '', icon: 'ph-storefront' });
+        setPageState('ok');
+      } catch (e) {
+        if (cancelled) return;
+        if (e?.status === 404) setPageState('notfound');
+        else setPageState('error');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const [shareOpen, setShareOpen] = useState(false);
   const [toast, setToast] = useState('');
@@ -124,7 +155,46 @@ export default function Vendor() {
 
   const isFav = useMemo(() => (vendor ? isFavorite(vendor.id) : false), [vendor?.id, favTick]);
 
-  if (!vendor || !category || !detail) {
+  if (pageState === 'loading') {
+    return (
+      <>
+        <header className="mobile-header mobile-header--split mobile-only vendor-page-header">
+          <button type="button" className="icon-btn header-back" onClick={() => navigate(-1)} aria-label="Orqaga">
+            <i className="ph ph-arrow-left"></i>
+          </button>
+          <div className="header-location">
+            <span>Yuklanmoqda…</span>
+          </div>
+        </header>
+        <section className="home-section">
+          <p className="muted-text">Yuklanmoqda…</p>
+        </section>
+      </>
+    );
+  }
+
+  if (pageState === 'error') {
+    return (
+      <>
+        <header className="mobile-header mobile-header--split mobile-only">
+          <button type="button" className="icon-btn header-back" onClick={() => navigate(-1)} aria-label="Orqaga">
+            <i className="ph ph-arrow-left"></i>
+          </button>
+          <div className="header-location">
+            <span>Xato</span>
+          </div>
+        </header>
+        <section className="home-section">
+          <p className="muted-text">Serverga ulanib bo‘lmadi.</p>
+          <button type="button" className="btn-primary" onClick={() => navigate('/')}>
+            Bosh sahifa
+          </button>
+        </section>
+      </>
+    );
+  }
+
+  if (pageState === 'notfound' || !vendor || !category || !detail) {
     return (
       <>
         <header className="mobile-header mobile-header--split mobile-only">
@@ -336,7 +406,7 @@ export default function Vendor() {
         <p className="vendor-description">{vendor.description}</p>
 
         <div className="vendor-specs">
-          {vendor.specs.map((s) => (
+          {(vendor.specs ?? []).map((s) => (
             <div key={s.label} className="vendor-spec-row">
               <span className="vendor-spec-label">{s.label}</span>
               <span className="vendor-spec-value">{s.value}</span>
@@ -345,9 +415,11 @@ export default function Vendor() {
         </div>
 
         <div className="vendor-actions">
-          <a className="btn-primary vendor-phone-btn" href={`tel:${vendor.phone.replace(/[^\d+]/g, '')}`}>
-            <i className="ph ph-phone" aria-hidden /> Qo‘ng‘iroq qilish
-          </a>
+          {vendor.phone ? (
+            <a className="btn-primary vendor-phone-btn" href={`tel:${String(vendor.phone).replace(/[^\d+]/g, '')}`}>
+              <i className="ph ph-phone" aria-hidden /> Qo‘ng‘iroq qilish
+            </a>
+          ) : null}
           <a
             className="btn-outline vendor-tg-btn"
             href={telegramContactUrl}
@@ -424,9 +496,11 @@ export default function Vendor() {
           </form>
         </div>
 
-        <button type="button" className="btn-outline vendor-more-cat" onClick={() => navigate(`/category/${category.slug}`)}>
-          Shu yo‘nalishdagi boshqalari
-        </button>
+        {category.slug ? (
+          <button type="button" className="btn-outline vendor-more-cat" onClick={() => navigate(`/category/${category.slug}`)}>
+            Shu yo‘nalishdagi boshqalari
+          </button>
+        ) : null}
       </section>
 
       {requestOpen ? (

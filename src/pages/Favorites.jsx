@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthGateSheet from '../components/AuthGateSheet';
 import { useAuth } from '../context/AuthContext';
-import { getVendorById } from '../data/catalog';
+import { fetchVendors } from '../utils/catalogApi';
 import { getFavoriteIds, toggleFavorite, isFavorite } from '../utils/favoritesStorage';
 
 export default function Favorites() {
@@ -10,6 +10,8 @@ export default function Favorites() {
   const { user } = useAuth();
   const [tick, setTick] = useState(0);
   const [authGateOpen, setAuthGateOpen] = useState(false);
+  const [vendors, setVendors] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fn = () => setTick((t) => t + 1);
@@ -17,13 +19,30 @@ export default function Favorites() {
     return () => window.removeEventListener('toymakon-favorites', fn);
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    setLoading(true);
+    fetchVendors()
+      .then((list) => {
+        if (!cancelled) setVendors(list);
+      })
+      .catch(() => {
+        if (!cancelled) setVendors([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   const favorites = useMemo(() => {
     void tick;
     const ids = getFavoriteIds();
-    return ids
-      .map((id) => getVendorById(id))
-      .filter(Boolean);
-  }, [tick]);
+    return ids.map((id) => vendors.find((v) => v.id === id)).filter(Boolean);
+  }, [tick, vendors]);
 
   if (!user) {
     return (
@@ -70,8 +89,10 @@ export default function Favorites() {
         <div className="section-header">
           <h2>Siz saqlaganlar</h2>
         </div>
-        {favorites.length === 0 ? (
-          <p className="muted-text">Hali hech narsa qo‘shmadingiz. Katalogdan yurakcha bosib qo‘ying.</p>
+        {loading ? (
+          <p className="muted-text">Yuklanmoqda…</p>
+        ) : favorites.length === 0 ? (
+          <p className="muted-text">Hali hech narsa qo‘shmadingiz yoki ma’lumotlar hozircha yo‘q.</p>
         ) : (
           <div className="listing-stack">
             {favorites.map((v) => (

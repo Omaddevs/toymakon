@@ -1,12 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
-  getSessionUsername,
-  saveUser,
-  setSessionUsername,
-  validatePassword,
-  validateUsername,
-  verifyCredentials,
-} from '../utils/authStorage';
+  initAuthSession,
+  loginRequest,
+  logoutStorage,
+  registerRequest,
+} from '../utils/authApi';
+import { validatePassword, validateUsername } from '../utils/authStorage';
 
 const AuthContext = createContext(null);
 
@@ -15,9 +14,20 @@ export function AuthProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const name = getSessionUsername();
-    if (name) setUser({ username: name });
-    setReady(true);
+    let cancelled = false;
+    (async () => {
+      try {
+        const u = await initAuthSession();
+        if (!cancelled) setUser(u);
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = useCallback(async (usernameRaw, passwordRaw) => {
@@ -25,10 +35,8 @@ export function AuthProvider({ children }) {
     if (!vu.ok) throw new Error(vu.code === 'long' ? 'username_too_long' : 'username_invalid');
     const vp = validatePassword(passwordRaw);
     if (!vp.ok) throw new Error('password_too_long');
-    const ok = await verifyCredentials(vu.username, vp.password);
-    if (!ok) throw new Error('credentials');
-    setSessionUsername(vu.username);
-    setUser({ username: vu.username });
+    const u = await loginRequest(vu.username, vp.password);
+    setUser(u);
   }, []);
 
   const register = useCallback(async (usernameRaw, passwordRaw, passwordConfirm) => {
@@ -37,14 +45,16 @@ export function AuthProvider({ children }) {
     const vp = validatePassword(passwordRaw);
     if (!vp.ok) throw new Error('password_too_long');
     if (passwordRaw !== passwordConfirm) throw new Error('mismatch');
-    const created = await saveUser(vu.username, vp.password);
-    if (!created) throw new Error('exists');
-    setSessionUsername(vu.username);
-    setUser({ username: vu.username });
+    const u = await registerRequest({
+      username: vu.username,
+      password: vp.password,
+      password_confirm: passwordConfirm,
+    });
+    setUser(u);
   }, []);
 
   const logout = useCallback(() => {
-    setSessionUsername(null);
+    logoutStorage();
     setUser(null);
   }, []);
 

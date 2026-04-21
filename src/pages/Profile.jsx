@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getReviewsByUsername, deleteUserReview } from '../utils/vendorReviewsStorage';
-import { VENDORS } from '../data/catalog';
+import { fetchVendors } from '../utils/catalogApi';
 
 function msgForError(code) {
   switch (code) {
@@ -18,6 +18,8 @@ function msgForError(code) {
       return 'Bu foydalanuvchi nomi band. Boshqa nom tanlang.';
     case 'credentials':
       return 'Login yoki parol noto‘g‘ri.';
+    case 'api':
+      return 'Server bilan aloqa xatosi. Keyinroq urinib ko‘ring.';
     default:
       return 'Xatolik yuz berdi. Qayta urinib ko‘ring.';
   }
@@ -34,7 +36,8 @@ export default function Profile() {
   const navigate = useNavigate();
   const [activeModal, setActiveModal] = useState(null);
   const [myReviews, setMyReviews] = useState([]);
-  
+  const [vendorNames, setVendorNames] = useState({});
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -42,6 +45,13 @@ export default function Profile() {
     if (user && activeModal === 'reviews') {
       const revs = getReviewsByUsername(user.username);
       setMyReviews(revs);
+      fetchVendors()
+        .then((list) => {
+          const m = {};
+          for (const v of list) m[v.id] = v.name;
+          setVendorNames(m);
+        })
+        .catch(() => setVendorNames({}));
     }
   }, [user, activeModal]);
 
@@ -66,7 +76,7 @@ export default function Profile() {
       setPassword2('');
     } catch (err) {
       const code = err?.message || 'unknown';
-      setError(msgForError(code));
+      setError(err?.humanMessage || msgForError(code));
     } finally {
       setLoading(false);
     }
@@ -346,12 +356,12 @@ export default function Profile() {
                     <p className="auth-welcome-hint" style={{textAlign: 'center', marginTop: '30px', marginBottom: '30px'}}>Siz hali hech qanday sharh qoldirmagansiz.</p>
                   ) : (
                     myReviews.map(r => {
-                      const v = VENDORS.find(ven => ven.id === r.vendorId);
+                      const name = vendorNames[r.vendorId];
                       return (
                         <div key={r.id} style={{background: 'var(--bg-surface)', padding: '14px', borderRadius: 'var(--radius-sm)', marginBottom: '12px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)'}}>
                           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px'}}>
                             <div style={{fontSize: '14px', fontWeight: 'bold', color: 'var(--text-dark)'}}>
-                              {v ? v.name : 'Noma\'lum xizmat'}
+                              {name || 'Noma\'lum xizmat'}
                             </div>
                             <div style={{fontSize: '12px', color: 'var(--text-muted)'}}>
                               {r.date}

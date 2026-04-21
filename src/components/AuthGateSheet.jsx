@@ -8,6 +8,7 @@ const ERRORS = {
   mismatch: "Parollar mos kelmayapti.",
   exists: "Bu nom band — boshqa nom tanlab ko'ring.",
   credentials: "Login yoki parol noto'g'ri.",
+  api: "Server bilan aloqa xatosi. Keyinroq urinib ko'ring.",
 };
 
 function msgForError(code) {
@@ -59,7 +60,7 @@ export default function AuthGateSheet({ open, onClose, onSuccess, hint }) {
       reset();
       onSuccess?.();
     } catch (err) {
-      setError(msgForError(err?.message || 'unknown'));
+      setError(err?.humanMessage || msgForError(err?.message || 'unknown'));
     } finally {
       setLoading(false);
     }

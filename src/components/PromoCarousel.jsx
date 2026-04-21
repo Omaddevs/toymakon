@@ -1,49 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCategoryBySlug, getVendorsByCategoryId, VENDORS } from '../data/catalog';
+import { fetchPromoPosts, recordPromoView } from '../utils/promoApi';
 
 const SLIDE_MS = 5500;
 const TRANSITION_MS = 600;
-
-/** API ishlamasa — statik fallback (slug backend seed bilan mos) */
-const FALLBACK_SLIDES = [
-  {
-    slug: 'banner-toyxona',
-    badge: 'Yangi mavsum',
-    title: '2026 mavsum uchun eng yaxshi to‘yxonalar',
-    path: '/category/toyxona',
-    background_url:
-      'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=800&q=80',
-    sort_order: 0,
-  },
-  {
-    slug: 'banner-fotostudio',
-    badge: 'FotoStudio',
-    title: 'To‘y va love story — professional foto va video',
-    path: '/category/fotostudio',
-    background_url:
-      'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=800&q=80',
-    sort_order: 1,
-  },
-  {
-    slug: 'banner-marry-me',
-    badge: 'Marry me',
-    title: 'Romantik taklif joylari va maxsus bezatish',
-    path: '/category/marry-me',
-    background_url:
-      'https://images.unsplash.com/photo-1522673607200-164506f2ce48?auto=format&fit=crop&w=800&q=80',
-    sort_order: 2,
-  },
-  {
-    slug: 'banner-katalog',
-    badge: 'Katalog',
-    title: 'Barcha xizmatlar — bitta ilovada',
-    path: '/category',
-    background_url:
-      'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80',
-    sort_order: 3,
-  },
-];
 
 function sortSlides(rows) {
   return [...rows].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
@@ -51,12 +11,29 @@ function sortSlides(rows) {
 
 export default function PromoCarousel() {
   const navigate = useNavigate();
-  const [slides, setSlides] = useState(FALLBACK_SLIDES);
+  const [slides, setSlides] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const timerRef = useRef(null);
-  const n = slides.length;
+  const n = Math.max(slides.length, 1);
 
-
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchPromoPosts()
+      .then((rows) => {
+        if (!cancelled) setSlides(sortSlides(rows ?? []));
+      })
+      .catch(() => {
+        if (!cancelled) setSlides([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const go = useCallback(
     (i) => {
@@ -66,13 +43,49 @@ export default function PromoCarousel() {
   );
 
   useEffect(() => {
+    setIndex(0);
+  }, [slides.length]);
+
+  useEffect(() => {
+    if (slides.length === 0) return undefined;
     timerRef.current = window.setInterval(() => {
-      setIndex((i) => (i + 1) % n);
+      setIndex((i) => (i + 1) % slides.length);
     }, SLIDE_MS);
     return () => {
       if (timerRef.current) window.clearInterval(timerRef.current);
     };
-  }, [n]);
+  }, [slides.length]);
+
+  const onNavigateSlide = useCallback(
+    (path, slug) => {
+      if (slug) {
+        recordPromoView(slug).catch(() => {});
+      }
+      navigate(path);
+    },
+    [navigate]
+  );
+
+  if (loading) {
+    return (
+      <div className="promo-carousel" aria-label="Reklama bannerlari">
+        <p className="muted-text" style={{ padding: '24px 16px' }}>
+          Yuklanmoqda…
+        </p>
+      </div>
+    );
+  }
+
+  if (slides.length === 0) {
+    return (
+      <div className="promo-carousel" aria-label="Reklama bannerlari">
+        <p className="muted-text" style={{ padding: '24px 16px' }}>
+          Ma’lumotlar hozircha yo‘q
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="promo-carousel" aria-roledescription="carousel" aria-label="Reklama bannerlari">
       <div className="promo-carousel-viewport">
@@ -90,7 +103,11 @@ export default function PromoCarousel() {
                   <div className="banner-content">
                     <span className="banner-badge">{slide.badge}</span>
                     <h3>{slide.title}</h3>
-                    <button type="button" className="btn-primary" onClick={() => navigate(slide.path)}>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => onNavigateSlide(slide.path, slide.slug)}
+                    >
                       Ko‘rish <i className="ph ph-arrow-right"></i>
                     </button>
                   </div>
@@ -107,16 +124,16 @@ export default function PromoCarousel() {
       </div>
       <div className="promo-carousel-dots" role="tablist" aria-label="Slaydlar">
         {slides.map((s, i) => (
-            <button
-              key={s.slug || i}
-              type="button"
-              role="tab"
-              aria-selected={i === index}
-              aria-label={`${i + 1}-slayd`}
-              className={`promo-carousel-dot ${i === index ? 'is-active' : ''}`}
-              onClick={() => go(i)}
-            />
-          ))}
+          <button
+            key={s.slug || i}
+            type="button"
+            role="tab"
+            aria-selected={i === index}
+            aria-label={`${i + 1}-slayd`}
+            className={`promo-carousel-dot ${i === index ? 'is-active' : ''}`}
+            onClick={() => go(i)}
+          />
+        ))}
       </div>
     </div>
   );

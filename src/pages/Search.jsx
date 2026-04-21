@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
-import { ALL_CATEGORIES, searchVendors } from '../data/catalog';
+import { fetchCategories, fetchVendors } from '../utils/catalogApi';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -61,15 +61,109 @@ function MapFitBounds({ positions, userPos }) {
 
 export default function Search() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [query, setQuery] = useState('');
   const [viewMode, setViewMode] = useState('list');
-  /** Karta ko‘rinishida joylashuv tasdiqlanguncha xarita ochilmaydi */
+  const [showFilters, setShowFilters] = useState(false);
   const [mapAccess, setMapAccess] = useState(false);
   const [userPos, setUserPos] = useState(null);
   const [geoError, setGeoError] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [minRating, setMinRating] = useState('');
+  const [ordering, setOrdering] = useState('');
 
-  const results = useMemo(() => searchVendors(query), [query]);
+  const [categories, setCategories] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingResults, setLoadingResults] = useState(false);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchCategories(), fetchVendors()])
+      .then(([cats, vens]) => {
+        if (!cancelled) {
+          setCategories(cats);
+          setDistricts(
+            [...new Set(vens.map((v) => (v.district || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError('Serverga ulanib bo‘lmadi.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (loadError) return;
+    let cancelled = false;
+    setLoadingResults(true);
+    fetchVendors({
+      search: query.trim() || undefined,
+      category: selectedCategory || undefined,
+      district: selectedDistrict || undefined,
+      minRating: minRating || undefined,
+      ordering: ordering || undefined,
+    })
+      .then((rows) => {
+        if (!cancelled) setVendors(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setVendors([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingResults(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [query, selectedCategory, selectedDistrict, minRating, ordering, loadError]);
+
+  const results = vendors;
   const markerPositions = useMemo(() => results.map((v) => getStableCoords(v.id)), [results]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedCategory) count += 1;
+    if (selectedDistrict) count += 1;
+    if (minRating) count += 1;
+    if (ordering) count += 1;
+    return count;
+  }, [selectedCategory, selectedDistrict, minRating, ordering]);
+
+  const clearFilters = useCallback(() => {
+    setSelectedCategory('');
+    setSelectedDistrict('');
+    setMinRating('');
+    setOrdering('');
+  }, []);
+
+  useEffect(() => {
+    const openFromQuery = new URLSearchParams(location.search).get('openFilter') === '1';
+    if (openFromQuery) setShowFilters(true);
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!showFilters) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setShowFilters(false);
+    };
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [showFilters]);
 
   const openMapView = useCallback(() => {
     setViewMode('map');
@@ -107,6 +201,42 @@ export default function Search() {
     setGeoError('');
   }, []);
 
+  if (loading) {
+    return (
+      <>
+        <header className="mobile-header mobile-header--split mobile-only" style={{ zIndex: 1001 }}>
+          <button type="button" className="icon-btn header-back" onClick={() => navigate(-1)} aria-label="Orqaga">
+            <i className="ph ph-arrow-left"></i>
+          </button>
+          <div className="header-location">
+            <span>Qidiruv & Karta</span>
+          </div>
+        </header>
+        <section className="home-section">
+          <p className="muted-text">Yuklanmoqda…</p>
+        </section>
+      </>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <>
+        <header className="mobile-header mobile-header--split mobile-only" style={{ zIndex: 1001 }}>
+          <button type="button" className="icon-btn header-back" onClick={() => navigate(-1)} aria-label="Orqaga">
+            <i className="ph ph-arrow-left"></i>
+          </button>
+          <div className="header-location">
+            <span>Qidiruv & Karta</span>
+          </div>
+        </header>
+        <section className="home-section">
+          <p className="muted-text">{loadError}</p>
+        </section>
+      </>
+    );
+  }
+
   return (
     <>
       <header className="mobile-header mobile-header--split mobile-only" style={{ zIndex: 1001 }}>
@@ -122,9 +252,7 @@ export default function Search() {
         className={`home-section search-page ${viewMode === 'map' ? 'search-page--map' : ''}`}
         style={viewMode === 'map' && mapAccess ? { padding: 0, overflow: 'hidden' } : {}}
       >
-        <div
-          className={`search-bar ${viewMode === 'map' ? 'search-bar--map' : ''}`}
-        >
+        <div className={`search-bar ${viewMode === 'map' ? 'search-bar--map' : ''}`}>
           <i className="ph ph-magnifying-glass search-icon"></i>
           <input
             type="search"
@@ -132,11 +260,17 @@ export default function Search() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          <button
+            type="button"
+            className="search-filter-btn"
+            aria-label="Filtrlar"
+            onClick={() => setShowFilters((s) => !s)}
+          >
+            <i className="ph ph-sliders-horizontal"></i>
+          </button>
         </div>
 
-        <div
-          className={`search-view-toggle ${viewMode === 'map' ? 'search-view-toggle--floating' : ''}`}
-        >
+        <div className={`search-view-toggle ${viewMode === 'map' ? 'search-view-toggle--floating' : ''}`}>
           <div className="search-view-toggle__inner auth-tabs">
             <button
               type="button"
@@ -155,47 +289,59 @@ export default function Search() {
           <>
             <div className="search-quick">
               <p className="search-quick-label">Kategoriyalar</p>
-              <div className="search-chips">
-                {ALL_CATEGORIES.map((c) => (
-                  <button key={c.id} type="button" className="search-chip" onClick={() => navigate(`/category/${c.slug}`)}>
-                    {c.shortLabel}
-                  </button>
-                ))}
-              </div>
+              {categories.length === 0 ? (
+                <p className="muted-text" style={{ marginTop: 8 }}>
+                  Ma’lumotlar hozircha yo‘q
+                </p>
+              ) : (
+                <div className="search-chips">
+                  {categories.map((c) => (
+                    <button key={c.id} type="button" className="search-chip" onClick={() => navigate(`/category/${c.slug}`)}>
+                      {c.shortLabel}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="section-header">
               <h2>Natijalar ({results.length})</h2>
             </div>
             <div className="listing-stack">
-              {results.map((v) => {
-                const cat = ALL_CATEGORIES.find((c) => c.id === v.categoryId);
-                return (
-                  <div
-                    key={v.id}
-                    className="service-card listing-full service-card--horizontal"
-                    onClick={() => navigate(`/vendor/${v.id}`)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && navigate(`/vendor/${v.id}`)}
-                  >
-                    <div className="card-img-wrap card-img-wrap--side">
-                      {v.badge ? <span className="card-badge">{v.badge}</span> : null}
-                      <img src={v.image} alt={v.name} />
-                    </div>
-                    <div className="card-body card-body--grow">
-                      <div className="card-meta">
-                        {cat?.shortLabel} • {v.district}
+              {loadingResults ? (
+                <p className="muted-text">Yuklanmoqda…</p>
+              ) : results.length === 0 ? (
+                <p className="muted-text">Ma’lumotlar hozircha yo‘q</p>
+              ) : (
+                results.map((v) => {
+                  const cat = categories.find((c) => c.id === v.categoryId);
+                  return (
+                    <div
+                      key={v.id}
+                      className="service-card listing-full service-card--horizontal"
+                      onClick={() => navigate(`/vendor/${v.id}`)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && navigate(`/vendor/${v.id}`)}
+                    >
+                      <div className="card-img-wrap card-img-wrap--side">
+                        {v.badge ? <span className="card-badge">{v.badge}</span> : null}
+                        <img src={v.image} alt={v.name} />
                       </div>
-                      <h4 className="card-title">{v.name}</h4>
-                      <div className="card-price">
-                        {v.priceLabel} <span>{v.priceNote}</span>
+                      <div className="card-body card-body--grow">
+                        <div className="card-meta">
+                          {cat?.shortLabel} • {v.district}
+                        </div>
+                        <h4 className="card-title">{v.name}</h4>
+                        <div className="card-price">
+                          {v.priceLabel} <span>{v.priceNote}</span>
+                        </div>
                       </div>
+                      <i className="ph ph-caret-right search-result-chev" aria-hidden></i>
                     </div>
-                    <i className="ph ph-caret-right search-result-chev" aria-hidden></i>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </>
         ) : null}
@@ -282,6 +428,75 @@ export default function Search() {
           </div>
         ) : null}
       </section>
+
+      {showFilters ? (
+        <>
+          <div className="share-backdrop" onClick={() => setShowFilters(false)} />
+          <div className="share-sheet" role="dialog" aria-modal="true" aria-labelledby="filters-sheet-title">
+            <div className="share-sheet-handle" />
+            <h3 id="filters-sheet-title" className="share-sheet-title">
+              Filtrlar
+            </h3>
+
+            <div className="search-filter-panel" style={{ marginTop: 0, border: 'none', padding: 0 }}>
+              <div className="search-filter-grid">
+                <label className="search-filter-field">
+                  <span>Kategoriya</span>
+                  <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                    <option value="">Barchasi</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.shortLabel}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="search-filter-field">
+                  <span>Tuman</span>
+                  <select value={selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value)}>
+                    <option value="">Barchasi</option>
+                    {districts.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="search-filter-field">
+                  <span>Min. reyting</span>
+                  <select value={minRating} onChange={(e) => setMinRating(e.target.value)}>
+                    <option value="">Hammasi</option>
+                    <option value="4.5">4.5+</option>
+                    <option value="4.0">4.0+</option>
+                    <option value="3.5">3.5+</option>
+                  </select>
+                </label>
+                <label className="search-filter-field">
+                  <span>Tartiblash</span>
+                  <select value={ordering} onChange={(e) => setOrdering(e.target.value)}>
+                    <option value="">Standart</option>
+                    <option value="-rating">Reyting bo‘yicha</option>
+                    <option value="name">Nom A-Z</option>
+                    <option value="-name">Nom Z-A</option>
+                  </select>
+                </label>
+              </div>
+              <div className="search-filter-actions">
+                <button type="button" className="btn-outline" onClick={clearFilters}>
+                  Tozalash
+                </button>
+                <span className="search-filter-count">
+                  {activeFilterCount ? `${activeFilterCount} ta filter` : 'Filter yo‘q'}
+                </span>
+              </div>
+            </div>
+
+            <button type="button" className="share-sheet-cancel" onClick={() => setShowFilters(false)}>
+              Tayyor
+            </button>
+          </div>
+        </>
+      ) : null}
     </>
   );
 }
