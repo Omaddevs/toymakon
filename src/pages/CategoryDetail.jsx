@@ -59,7 +59,7 @@ export default function CategoryDetail() {
     return () => window.removeEventListener('toymakon-favorites', fn);
   }, []);
 
-  const viewCount = (v) => (typeof v.reviewCount === 'number' ? v.reviewCount * 121 + 142 : 0);
+  const viewCount = (v) => v.view_count || 0;
 
   const handleLikeClick = (e, vendorId) => {
     e.stopPropagation();
