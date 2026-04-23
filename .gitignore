@@ -2,3 +2,6 @@ node_modules/
 .DS_Store
 dist/
 .env
+
+# Tasodifiy nusxa — alohida repo (toymakon-backend)
+toymakon-backend/
