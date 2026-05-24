@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import { fetchCategories, fetchVendors } from '../utils/catalogApi';
@@ -8,24 +8,68 @@ import 'leaflet/dist/leaflet.css';
 const DEFAULT_CENTER = [41.3111, 69.2401];
 const DEFAULT_ZOOM = 12;
 
-function getStableCoords(vendorId) {
+// Kategoriya ranglari
+const CATEGORY_COLORS = {
+  venue:      '#16a34a',
+  attire:     '#ec4899',
+  media:      '#2563eb',
+  photo:      '#2563eb',
+  video:      '#7c3aed',
+  decor:      '#f59e0b',
+  transport:  '#6d28d9',
+  kartej:     '#6d28d9',
+  mc:         '#dc2626',
+  honanda:    '#dc2626',
+  marry_me:   '#be185d',
+  restaurant: '#ea580c',
+  tort:       '#d97706',
+  makeup:     '#db2777',
+  invitation: '#0891b2',
+  hotel:      '#0284c7',
+  animators:  '#7c3aed',
+  lawyer:     '#1d4ed8',
+  catering:   '#b45309',
+};
+
+function getCategoryColor(categoryId) {
+  if (!categoryId) return '#7e1d37';
+  const lower = (categoryId || '').toLowerCase();
+  for (const [key, color] of Object.entries(CATEGORY_COLORS)) {
+    if (lower.includes(key)) return color;
+  }
+  // Hash-based fallback color
   let hash = 0;
-  for (let i = 0; i < vendorId.length; i++) {
-    hash = vendorId.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < lower.length; i++) {
+    hash = lower.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colors = ['#16a34a', '#2563eb', '#dc2626', '#ea580c', '#7c3aed', '#0891b2', '#d97706'];
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getCoords(vendor) {
+  if (vendor.lat && vendor.lng) return [vendor.lat, vendor.lng];
+  // Stable pseudo-coordinates from vendor id
+  let hash = 0;
+  const id = vendor.id || vendor.code || '';
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
   }
   const lat = 41.3111 + (Math.abs(hash) % 100) / 1000 - 0.05;
   const lng = 69.2401 + (Math.abs(hash >> 2) % 100) / 1000 - 0.05;
   return [lat, lng];
 }
 
-const createCustomIcon = (price) =>
-  L.divIcon({
+function createCategoryMarkerIcon(categoryId, priceLabel) {
+  const color = getCategoryColor(categoryId);
+  const label = priceLabel ? String(priceLabel).slice(0, 12) : '—';
+  return L.divIcon({
     className: 'custom-map-marker',
-    html: `<div>${price}</div>`,
-    iconSize: [80, 30],
-    iconAnchor: [40, 30],
-    popupAnchor: [0, -30],
+    html: `<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.25);">${label}</div>`,
+    iconSize: [null, 28],
+    iconAnchor: [40, 28],
+    popupAnchor: [0, -32],
   });
+}
 
 const userDotIcon = L.divIcon({
   className: 'user-loc-marker',
@@ -36,24 +80,25 @@ const userDotIcon = L.divIcon({
 
 function MapFitBounds({ positions, userPos }) {
   const map = useMap();
+  const prevPositions = useRef(null);
 
   useEffect(() => {
+    const key = JSON.stringify(positions);
+    if (prevPositions.current === key) return;
+    prevPositions.current = key;
+
     const pts = userPos ? [userPos, ...positions] : [...positions];
     if (!pts.length) {
       map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
       return;
     }
     if (pts.length === 1) {
-      map.setView(pts[0], 13);
+      map.setView(pts[0], 14);
       return;
     }
     const bounds = L.latLngBounds(pts);
     if (!bounds.isValid()) return;
-    map.fitBounds(bounds, {
-      padding: [56, 56],
-      maxZoom: 14,
-      animate: true,
-    });
+    map.fitBounds(bounds, { padding: [56, 56], maxZoom: 15, animate: true });
   }, [map, positions, userPos]);
 
   return null;
@@ -64,7 +109,6 @@ export default function Search() {
   const location = useLocation();
   const [query, setQuery] = useState('');
   const [viewMode, setViewMode] = useState('list');
-  const [showFilters, setShowFilters] = useState(false);
   const [mapAccess, setMapAccess] = useState(false);
   const [userPos, setUserPos] = useState(null);
   const [geoError, setGeoError] = useState('');
@@ -72,6 +116,7 @@ export default function Search() {
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [minRating, setMinRating] = useState('');
   const [ordering, setOrdering] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   const [categories, setCategories] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -87,19 +132,19 @@ export default function Search() {
         if (!cancelled) {
           setCategories(cats);
           setDistricts(
-            [...new Set(vens.map((v) => (v.district || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+            [...new Set(vens.map((v) => (v.district || '').trim()).filter(Boolean))].sort((a, b) =>
+              a.localeCompare(b)
+            )
           );
         }
       })
       .catch(() => {
-        if (!cancelled) setLoadError('Serverga ulanib bo‘lmadi.');
+        if (!cancelled) setLoadError("Serverga ulanib bo'lmadi.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -113,30 +158,22 @@ export default function Search() {
       minRating: minRating || undefined,
       ordering: ordering || undefined,
     })
-      .then((rows) => {
-        if (!cancelled) setVendors(rows);
-      })
-      .catch(() => {
-        if (!cancelled) setVendors([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingResults(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .then((rows) => { if (!cancelled) setVendors(rows); })
+      .catch(() => { if (!cancelled) setVendors([]); })
+      .finally(() => { if (!cancelled) setLoadingResults(false); });
+    return () => { cancelled = true; };
   }, [query, selectedCategory, selectedDistrict, minRating, ordering, loadError]);
 
   const results = vendors;
-  const markerPositions = useMemo(() => results.map((v) => getStableCoords(v.id)), [results]);
+  const markerPositions = useMemo(() => results.map((v) => getCoords(v)), [results]);
 
   const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (selectedCategory) count += 1;
-    if (selectedDistrict) count += 1;
-    if (minRating) count += 1;
-    if (ordering) count += 1;
-    return count;
+    let n = 0;
+    if (selectedCategory) n++;
+    if (selectedDistrict) n++;
+    if (minRating) n++;
+    if (ordering) n++;
+    return n;
   }, [selectedCategory, selectedDistrict, minRating, ordering]);
 
   const clearFilters = useCallback(() => {
@@ -153,9 +190,7 @@ export default function Search() {
 
   useEffect(() => {
     if (!showFilters) return undefined;
-    const onKey = (e) => {
-      if (e.key === 'Escape') setShowFilters(false);
-    };
+    const onKey = (e) => { if (e.key === 'Escape') setShowFilters(false); };
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -180,7 +215,7 @@ export default function Search() {
   const confirmDeviceLocation = useCallback(() => {
     setGeoError('');
     if (!navigator.geolocation) {
-      setGeoError('Brauzeringiz joylashuvni qo‘llab-quvvatlamaydi. «Toshkent markazi»ni tanlang.');
+      setGeoError("Brauzeringiz joylashuvni qo'llab-quvvatlamaydi.");
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -189,7 +224,7 @@ export default function Search() {
         setMapAccess(true);
       },
       () => {
-        setGeoError('Joylashuvni olish mumkin emas. Ruxsat bering yoki «Toshkent markazi»ni tanlang.');
+        setGeoError("Joylashuvni olish mumkin emas. Ruxsat bering yoki «Toshkent markazi»ni tanlang.");
       },
       { enableHighAccuracy: true, timeout: 14000, maximumAge: 0 }
     );
@@ -201,20 +236,27 @@ export default function Search() {
     setGeoError('');
   }, []);
 
+  // Kategoriya chip bosish — map viewda filter, list viewda navigate
+  const handleCategoryChip = useCallback((cat) => {
+    if (viewMode === 'map' && mapAccess) {
+      setSelectedCategory((prev) => (prev === cat.id ? '' : cat.id));
+    } else if (viewMode === 'map') {
+      setSelectedCategory((prev) => (prev === cat.id ? '' : cat.id));
+    } else {
+      navigate(`/category/${cat.slug}`);
+    }
+  }, [viewMode, mapAccess, navigate]);
+
   if (loading) {
     return (
       <>
         <header className="mobile-header mobile-header--split mobile-only" style={{ zIndex: 1001 }}>
-          <button type="button" className="icon-btn header-back" onClick={() => navigate(-1)} aria-label="Orqaga">
-            <i className="ph ph-arrow-left"></i>
+          <button type="button" className="icon-btn header-back" onClick={() => navigate(-1)}>
+            <i className="ph ph-arrow-left" />
           </button>
-          <div className="header-location">
-            <span>Qidiruv & Karta</span>
-          </div>
+          <div className="header-location"><span>Qidiruv & Karta</span></div>
         </header>
-        <section className="home-section">
-          <p className="muted-text">Yuklanmoqda…</p>
-        </section>
+        <section className="home-section"><p className="muted-text">Yuklanmoqda…</p></section>
       </>
     );
   }
@@ -223,16 +265,12 @@ export default function Search() {
     return (
       <>
         <header className="mobile-header mobile-header--split mobile-only" style={{ zIndex: 1001 }}>
-          <button type="button" className="icon-btn header-back" onClick={() => navigate(-1)} aria-label="Orqaga">
-            <i className="ph ph-arrow-left"></i>
+          <button type="button" className="icon-btn header-back" onClick={() => navigate(-1)}>
+            <i className="ph ph-arrow-left" />
           </button>
-          <div className="header-location">
-            <span>Qidiruv & Karta</span>
-          </div>
+          <div className="header-location"><span>Qidiruv & Karta</span></div>
         </header>
-        <section className="home-section">
-          <p className="muted-text">{loadError}</p>
-        </section>
+        <section className="home-section"><p className="muted-text">{loadError}</p></section>
       </>
     );
   }
@@ -240,12 +278,10 @@ export default function Search() {
   return (
     <>
       <header className="mobile-header mobile-header--split mobile-only" style={{ zIndex: 1001 }}>
-        <button type="button" className="icon-btn header-back" onClick={() => navigate(-1)} aria-label="Orqaga">
-          <i className="ph ph-arrow-left"></i>
+        <button type="button" className="icon-btn header-back" onClick={() => navigate(-1)}>
+          <i className="ph ph-arrow-left" />
         </button>
-        <div className="header-location">
-          <span>Qidiruv & Karta</span>
-        </div>
+        <div className="header-location"><span>Qidiruv & Karta</span></div>
       </header>
 
       <section
@@ -253,7 +289,7 @@ export default function Search() {
         style={viewMode === 'map' && mapAccess ? { padding: 0, overflow: 'hidden' } : {}}
       >
         <div className={`search-bar ${viewMode === 'map' ? 'search-bar--map' : ''}`}>
-          <i className="ph ph-magnifying-glass search-icon"></i>
+          <i className="ph ph-magnifying-glass search-icon" />
           <input
             type="search"
             placeholder="Izlash... hudud, nom, yoki kategoriya"
@@ -263,10 +299,9 @@ export default function Search() {
           <button
             type="button"
             className="search-filter-btn"
-            aria-label="Filtrlar"
             onClick={() => setShowFilters((s) => !s)}
           >
-            <i className="ph ph-sliders-horizontal"></i>
+            <i className="ph ph-sliders-horizontal" />
           </button>
         </div>
 
@@ -277,26 +312,34 @@ export default function Search() {
               className={`auth-tab ${viewMode === 'list' ? 'is-active' : ''}`}
               onClick={openListView}
             >
-              Ro‘yxat
+              Ro'yxat
             </button>
-            <button type="button" className={`auth-tab ${viewMode === 'map' ? 'is-active' : ''}`} onClick={openMapView}>
+            <button
+              type="button"
+              className={`auth-tab ${viewMode === 'map' ? 'is-active' : ''}`}
+              onClick={openMapView}
+            >
               Karta
             </button>
           </div>
         </div>
 
+        {/* LIST VIEW */}
         {viewMode === 'list' ? (
           <>
             <div className="search-quick">
               <p className="search-quick-label">Kategoriyalar</p>
               {categories.length === 0 ? (
-                <p className="muted-text" style={{ marginTop: 8 }}>
-                  Ma’lumotlar hozircha yo‘q
-                </p>
+                <p className="muted-text" style={{ marginTop: 8 }}>Ma'lumotlar hozircha yo'q</p>
               ) : (
                 <div className="search-chips">
                   {categories.map((c) => (
-                    <button key={c.id} type="button" className="search-chip" onClick={() => navigate(`/category/${c.slug}`)}>
+                    <button
+                      key={c.id}
+                      type="button"
+                      className="search-chip"
+                      onClick={() => handleCategoryChip(c)}
+                    >
                       {c.shortLabel}
                     </button>
                   ))}
@@ -311,7 +354,7 @@ export default function Search() {
               {loadingResults ? (
                 <p className="muted-text">Yuklanmoqda…</p>
               ) : results.length === 0 ? (
-                <p className="muted-text">Ma’lumotlar hozircha yo‘q</p>
+                <p className="muted-text">Ma'lumotlar hozircha yo'q</p>
               ) : (
                 results.map((v) => {
                   const cat = categories.find((c) => c.id === v.categoryId);
@@ -329,7 +372,18 @@ export default function Search() {
                         <img src={v.image} alt={v.name} />
                       </div>
                       <div className="card-body card-body--grow">
-                        <div className="card-meta">
+                        <div
+                          className="card-meta"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <span
+                            className="map-cat-dot"
+                            style={{ background: getCategoryColor(v.categoryId) }}
+                          />
                           {cat?.shortLabel} • {v.district}
                         </div>
                         <h4 className="card-title">{v.name}</h4>
@@ -337,7 +391,7 @@ export default function Search() {
                           {v.priceLabel} <span>{v.priceNote}</span>
                         </div>
                       </div>
-                      <i className="ph ph-caret-right search-result-chev" aria-hidden></i>
+                      <i className="ph ph-caret-right search-result-chev" />
                     </div>
                   );
                 })
@@ -346,39 +400,63 @@ export default function Search() {
           </>
         ) : null}
 
+        {/* MAP GATE */}
         {viewMode === 'map' && !mapAccess ? (
-          <div className="search-location-gate" role="dialog" aria-modal="true" aria-labelledby="loc-gate-title">
+          <div className="search-location-gate">
             <div className="search-location-gate__card">
-              <div className="search-location-gate__icon" aria-hidden>
-                <i className="ph ph-map-pin"></i>
-              </div>
-              <h2 id="loc-gate-title" className="search-location-gate__title">
-                Joylashuvni tasdiqlang
-              </h2>
+              <div className="search-location-gate__icon"><i className="ph ph-map-pin" /></div>
+              <h2 className="search-location-gate__title">Joylashuvni tasdiqlang</h2>
               <p className="search-location-gate__text">
-                Xaritada yaqin takliflarni ko‘rsatish uchun hozirgi joylashuvingizni ulashing yoki Toshkent markazidan
-                foydalaning.
+                Xaritada yaqin takliflarni ko'rsatish uchun hozirgi joylashuvingizni ulashing yoki
+                Toshkent markazidan foydalaning.
               </p>
-              {geoError ? (
-                <p className="search-location-gate__error" role="alert">
-                  {geoError}
-                </p>
-              ) : null}
+              {geoError ? <p className="search-location-gate__error">{geoError}</p> : null}
               <button type="button" className="btn-primary search-location-gate__btn" onClick={confirmDeviceLocation}>
-                <i className="ph ph-crosshair" aria-hidden /> Joylashuvimni ulashish
+                <i className="ph ph-crosshair" /> Joylashuvimni ulashish
               </button>
               <button type="button" className="btn-outline search-location-gate__btn" onClick={confirmCenterOnly}>
-                Toshkent markazi bo‘yicha
+                Toshkent markazi bo'yicha
               </button>
               <button type="button" className="search-location-gate__back" onClick={openListView}>
-                Ro‘yxatga qaytish
+                Ro'yxatga qaytish
               </button>
             </div>
           </div>
         ) : null}
 
+        {/* MAP VIEW */}
         {viewMode === 'map' && mapAccess ? (
-          <div className="search-map-wrap">
+          <div className="search-map-wrap" style={{ position: 'relative' }}>
+            {/* Kategoriya filter chips (map ustida) */}
+            <div className="map-cat-chips">
+              <button
+                type="button"
+                className={`map-cat-chip ${!selectedCategory ? 'map-cat-chip--active' : ''}`}
+                onClick={() => setSelectedCategory('')}
+              >
+                Barchasi
+                <span className="map-cat-chip__count">{results.length}</span>
+              </button>
+              {categories.map((c) => {
+                const cnt = vendors.filter((v) => v.categoryId === c.id).length;
+                if (!cnt) return null;
+                const color = getCategoryColor(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`map-cat-chip ${selectedCategory === c.id ? 'map-cat-chip--active' : ''}`}
+                    style={selectedCategory === c.id ? { background: color, borderColor: color, color: '#fff' } : { borderColor: color, color: color }}
+                    onClick={() => setSelectedCategory((prev) => (prev === c.id ? '' : c.id))}
+                  >
+                    <span className="map-cat-chip__dot" style={{ background: color }} />
+                    {c.shortLabel}
+                    <span className="map-cat-chip__count">{cnt}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             <MapContainer
               center={userPos ?? DEFAULT_CENTER}
               zoom={userPos ? 13 : DEFAULT_ZOOM}
@@ -388,15 +466,21 @@ export default function Search() {
             >
               <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
               <MapFitBounds positions={markerPositions} userPos={userPos} />
+
               {userPos ? (
                 <Marker position={userPos} icon={userDotIcon}>
                   <Popup>Sizning taxminiy joylashuvingiz</Popup>
                 </Marker>
               ) : null}
+
               {results.map((v) => {
-                const coords = getStableCoords(v.id);
+                const coords = getCoords(v);
                 return (
-                  <Marker key={v.id} position={coords} icon={createCustomIcon(v.priceLabel)}>
+                  <Marker
+                    key={v.id}
+                    position={coords}
+                    icon={createCategoryMarkerIcon(v.categoryId, v.priceLabel)}
+                  >
                     <Popup closeButton={false}>
                       <div
                         style={{
@@ -410,13 +494,41 @@ export default function Search() {
                         onClick={() => navigate(`/vendor/${v.id}`)}
                         role="presentation"
                       >
-                        <img src={v.image} alt={v.name} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                        <div style={{ position: 'relative' }}>
+                          <img src={v.image} alt={v.name} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                          <span
+                            style={{
+                              position: 'absolute',
+                              top: 8,
+                              left: 8,
+                              background: getCategoryColor(v.categoryId),
+                              color: '#fff',
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: 20,
+                            }}
+                          >
+                            {categories.find((c) => c.id === v.categoryId)?.shortLabel || v.categoryId}
+                          </span>
+                        </div>
                         <div style={{ padding: '12px' }}>
-                          <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', color: '#111', fontWeight: 700 }}>{v.name}</h4>
-                          <p style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#666', fontWeight: 500 }}>{v.district}</p>
-                          <p style={{ margin: 0, fontSize: '14px', color: 'var(--accent)', fontWeight: 700 }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: 15, color: '#111', fontWeight: 700 }}>{v.name}</h4>
+                          <p style={{ margin: '0 0 6px', fontSize: 13, color: '#666' }}>{v.district}</p>
+                          {v.map_link ? (
+                            <a
+                              href={v.map_link}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ fontSize: 12, color: '#2563eb', display: 'block', marginBottom: 6 }}
+                            >
+                              <i className="ph ph-map-pin" /> Xaritada ko'rish
+                            </a>
+                          ) : null}
+                          <p style={{ margin: 0, fontSize: 14, color: 'var(--accent)', fontWeight: 700 }}>
                             {v.priceLabel}{' '}
-                            <span style={{ fontSize: '12px', color: '#888', fontWeight: 500 }}>{v.priceNote}</span>
+                            <span style={{ fontSize: 12, color: '#888', fontWeight: 500 }}>{v.priceNote}</span>
                           </p>
                         </div>
                       </div>
@@ -429,14 +541,13 @@ export default function Search() {
         ) : null}
       </section>
 
+      {/* FILTER SHEET */}
       {showFilters ? (
         <>
           <div className="share-backdrop" onClick={() => setShowFilters(false)} />
-          <div className="share-sheet" role="dialog" aria-modal="true" aria-labelledby="filters-sheet-title">
+          <div className="share-sheet" role="dialog">
             <div className="share-sheet-handle" />
-            <h3 id="filters-sheet-title" className="share-sheet-title">
-              Filtrlar
-            </h3>
+            <h3 className="share-sheet-title">Filtrlar</h3>
 
             <div className="search-filter-panel" style={{ marginTop: 0, border: 'none', padding: 0 }}>
               <div className="search-filter-grid">
@@ -445,9 +556,7 @@ export default function Search() {
                   <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
                     <option value="">Barchasi</option>
                     {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.shortLabel}
-                      </option>
+                      <option key={c.id} value={c.id}>{c.shortLabel}</option>
                     ))}
                   </select>
                 </label>
@@ -456,9 +565,7 @@ export default function Search() {
                   <select value={selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value)}>
                     <option value="">Barchasi</option>
                     {districts.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
+                      <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
                 </label>
@@ -475,18 +582,16 @@ export default function Search() {
                   <span>Tartiblash</span>
                   <select value={ordering} onChange={(e) => setOrdering(e.target.value)}>
                     <option value="">Standart</option>
-                    <option value="-rating">Reyting bo‘yicha</option>
+                    <option value="-rating">Reyting bo'yicha</option>
                     <option value="name">Nom A-Z</option>
                     <option value="-name">Nom Z-A</option>
                   </select>
                 </label>
               </div>
               <div className="search-filter-actions">
-                <button type="button" className="btn-outline" onClick={clearFilters}>
-                  Tozalash
-                </button>
+                <button type="button" className="btn-outline" onClick={clearFilters}>Tozalash</button>
                 <span className="search-filter-count">
-                  {activeFilterCount ? `${activeFilterCount} ta filter` : 'Filter yo‘q'}
+                  {activeFilterCount ? `${activeFilterCount} ta filter` : "Filter yo'q"}
                 </span>
               </div>
             </div>

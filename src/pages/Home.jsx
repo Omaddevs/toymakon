@@ -145,7 +145,6 @@ export default function Home() {
     setFavTick((t) => t + 1);
   };
 
-  const viewCount = (v) => v.view_count || 0;
   const storyEmbed = youtubeEmbedUrl(storyVideo?.storyVideoUrl);
   const storyPoster = youtubePosterUrl(storyVideo?.storyVideoUrl);
 
@@ -354,9 +353,6 @@ export default function Home() {
                     <span className="capacity">
                       <i className={`ph ${card.footerIcon}`}></i> {card.footerLine}
                     </span>
-                    <span className="card-views" title="Ko‘rishlar soni">
-                      <i className="ph ph-eye"></i> {viewCount(card)}
-                    </span>
                   </div>
                 </div>
               </div>
@@ -417,9 +413,6 @@ export default function Home() {
                     <div className="card-footer">
                       <span className="capacity">
                         <i className={`ph ${vendor.footerIcon}`}></i> {vendor.footerLine}
-                      </span>
-                      <span className="card-views" title="Ko‘rishlar soni">
-                        <i className="ph ph-eye"></i> {viewCount(vendor)}
                       </span>
                     </div>
                   </div>

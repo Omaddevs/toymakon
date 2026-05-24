@@ -5,7 +5,7 @@ export function getApiBaseUrl() {
 }
 
 /**
- * @returns {Promise<Array<{slug:string,badge:string,title:string,path:string,background_url:string,sort_order:number,view_count:number}>>}
+ * @returns {Promise<Array<{slug:string,badge:string,title:string,path:string,background_url:string,sort_order:number}>>}
  */
 export async function fetchPromoPosts() {
   const base = getApiBaseUrl();
@@ -16,25 +16,3 @@ export async function fetchPromoPosts() {
   return Array.isArray(data) ? data : data.results ?? [];
 }
 
-/**
- * Korishni backendda +1 qiladi, yangilangan view_count qaytaradi.
- */
-export async function recordPromoView(slug) {
-  const base = getApiBaseUrl();
-  const url = `${base}/api/promo-posts/${encodeURIComponent(slug)}/record-view/`;
-  const res = await fetch(url, { method: 'POST', headers: { Accept: 'application/json' } });
-  if (!res.ok) throw new Error(`record-view ${res.status}`);
-  return res.json();
-}
-
-/** Ko‘rishlar sonini chiroyli ko‘rinishda (o‘zbek/raqam ajratish). */
-export function formatViewCount(n) {
-  const x = Number(n) || 0;
-  if (x >= 1_000_000) {
-    const v = x / 1_000_000;
-    return `${v >= 10 ? Math.round(v) : v.toFixed(1).replace(/\.0$/, '')} mln`;
-  }
-  if (x >= 10_000) return `${Math.round(x / 1000)}k`;
-  if (x >= 1000) return `${(x / 1000).toFixed(1).replace(/\.0$/, '')}k`;
-  return String(x);
-}

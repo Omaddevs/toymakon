@@ -211,3 +211,73 @@ export async function registerRequest(payload) {
 export function logoutStorage() {
   clearTokens();
 }
+
+export async function sendOTPRequest(phone) {
+  let res;
+  try {
+    res = await fetch(apiUrl('/api/auth/send-otp/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+  } catch {
+    const err = new Error('api');
+    err.humanMessage = "Serverga ulanib bo'lmadi.";
+    throw err;
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(firstErrorMessage(data) || 'Xato');
+    err.humanMessage = firstErrorMessage(data);
+    throw err;
+  }
+  return data;
+}
+
+export async function verifyOTPRequest(phone, code) {
+  let res;
+  try {
+    res = await fetch(apiUrl('/api/auth/verify-otp/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ phone, code }),
+    });
+  } catch {
+    const err = new Error('api');
+    err.humanMessage = "Serverga ulanib bo'lmadi.";
+    throw err;
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(firstErrorMessage(data) || 'Xato');
+    err.humanMessage = firstErrorMessage(data);
+    throw err;
+  }
+  return data;
+}
+
+export async function completeRegistrationRequest(payload) {
+  let res;
+  try {
+    res = await fetch(apiUrl('/api/auth/complete-registration/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    const err = new Error('api');
+    err.humanMessage = "Serverga ulanib bo'lmadi.";
+    throw err;
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const code = mapErrorToCode(data, res.status);
+    const err = new Error(code);
+    err.humanMessage = firstErrorMessage(data);
+    throw err;
+  }
+  if (data.access && data.refresh) {
+    setTokens(data.access, data.refresh);
+  }
+  return data.user;
+}

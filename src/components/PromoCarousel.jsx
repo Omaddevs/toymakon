@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchPromoPosts, recordPromoView } from '../utils/promoApi';
+import { fetchPromoPosts } from '../utils/promoApi';
 
 const SLIDE_MS = 5500;
 const TRANSITION_MS = 600;
@@ -57,10 +57,7 @@ export default function PromoCarousel() {
   }, [slides.length]);
 
   const onNavigateSlide = useCallback(
-    (path, slug) => {
-      if (slug) {
-        recordPromoView(slug).catch(() => {});
-      }
+    (path) => {
       navigate(path);
     },
     [navigate]
@@ -106,7 +103,7 @@ export default function PromoCarousel() {
                     <button
                       type="button"
                       className="btn-primary"
-                      onClick={() => onNavigateSlide(slide.path, slide.slug)}
+                      onClick={() => onNavigateSlide(slide.path)}
                     >
                       Ko‘rish <i className="ph ph-arrow-right"></i>
                     </button>

@@ -5,7 +5,7 @@ import { StarsDisplay, StarsInput } from '../components/StarRating';
 import AuthGateSheet from '../components/AuthGateSheet';
 import { useAuth } from '../context/AuthContext';
 import { enrichVendorForDetail } from '../data/catalog';
-import { fetchCategories, fetchVendorByCode } from '../utils/catalogApi';
+import { fetchCategories, fetchVendorByCode, recordVendorView } from '../utils/catalogApi';
 import { isFavorite, toggleFavorite } from '../utils/favoritesStorage';
 import { addUserReview, getUserReviews } from '../utils/vendorReviewsStorage';
 import { saveRequest } from '../utils/vendorRequestsStorage';
@@ -39,6 +39,7 @@ export default function Vendor() {
   const [vendor, setVendor] = useState(null);
   const [category, setCategory] = useState(null);
   const [pageState, setPageState] = useState('loading');
+  const [viewCount, setViewCount] = useState(null);
 
   const { user } = useAuth();
 
@@ -51,15 +52,18 @@ export default function Vendor() {
     setPageState('loading');
     setVendor(null);
     setCategory(null);
+    setViewCount(null);
     (async () => {
       try {
-        const v = await fetchVendorByCode(id);
-        const cats = await fetchCategories();
+        const [v, cats] = await Promise.all([fetchVendorByCode(id), fetchCategories()]);
         if (cancelled) return;
         setVendor(v);
         const cat = cats.find((c) => c.id === v.categoryId);
         setCategory(cat ?? { id: v.categoryId, shortLabel: v.categoryId, slug: '', title: '', icon: 'ph-storefront' });
         setPageState('ok');
+        recordVendorView(id)
+          .then((res) => { if (!cancelled && res?.view_count != null) setViewCount(res.view_count); })
+          .catch(() => {});
       } catch (e) {
         if (cancelled) return;
         if (e?.status === 404) setPageState('notfound');
@@ -392,6 +396,12 @@ export default function Vendor() {
             <StarsDisplay value={avgRating} sizeClass="vendor-star--md" />
             <span className="vendor-rating-num">{avgRating.toFixed(1)}</span>
             <span className="vendor-rating-count">{allReviews.length} sharh</span>
+            {viewCount != null && (
+              <span className="vendor-view-count">
+                <i className="ph ph-eye" />
+                {viewCount.toLocaleString('uz')}
+              </span>
+            )}
           </div>
         </div>
 

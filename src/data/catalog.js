@@ -24,10 +24,6 @@ export function enrichVendorForDetail(vendor) {
   const q = encodeURIComponent(`${vendor.name}, ${displayLocation}`);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${q}`;
   const displayRating = typeof vendor.rating === 'number' ? vendor.rating : Number(vendor.rating) || 4.5;
-  const displayReviewCount =
-    typeof vendor.reviewCount === 'number'
-      ? vendor.reviewCount
-      : 12 + ((vendor.name?.length ?? 0) + (vendor.id?.length ?? 0)) % 40;
   const displayTagline = vendor.tagline ?? truncateDetailText(vendor.description, 115);
   const catalogReviews = Array.isArray(vendor.reviews) ? vendor.reviews : [];
 
@@ -36,7 +32,6 @@ export function enrichVendorForDetail(vendor) {
     displayLocation,
     mapsUrl,
     displayRating,
-    displayReviewCount,
     displayTagline,
     catalogReviews,
   };

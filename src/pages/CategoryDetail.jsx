@@ -59,8 +59,6 @@ export default function CategoryDetail() {
     return () => window.removeEventListener('toymakon-favorites', fn);
   }, []);
 
-  const viewCount = (v) => v.view_count || 0;
-
   const handleLikeClick = (e, vendorId) => {
     e.stopPropagation();
     e.preventDefault();
@@ -195,9 +193,6 @@ export default function CategoryDetail() {
                   <div className="card-footer">
                     <span className="capacity">
                       <i className={`ph ${v.footerIcon}`}></i> {v.footerLine}
-                    </span>
-                    <span className="card-views" title="Ko‘rishlar soni">
-                      <i className="ph ph-eye"></i> {viewCount(v)}
                     </span>
                   </div>
                 </div>

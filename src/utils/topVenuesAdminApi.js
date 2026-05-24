@@ -1,4 +1,10 @@
-import { getAccessToken, tryRefreshAccess } from './authApi';
+import { getAccessToken, getApiBaseUrl, tryRefreshAccess } from './authApi';
+
+function apiUrl(path) {
+  const base = getApiBaseUrl();
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return base ? `${base}${p}` : p;
+}
 
 async function adminFetch(path, options = {}) {
   let token = getAccessToken();
@@ -7,14 +13,15 @@ async function adminFetch(path, options = {}) {
     err.status = 401;
     throw err;
   }
-  let res = await fetch(path, {
+  const makeReq = (t) => fetch(apiUrl(path), {
     ...options,
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${t}`,
       ...(options.headers || {}),
     },
   });
+  let res = await makeReq(token);
   if (res.status === 401) {
     const refreshed = await tryRefreshAccess();
     if (!refreshed) {
@@ -22,15 +29,7 @@ async function adminFetch(path, options = {}) {
       err.status = 401;
       throw err;
     }
-    token = getAccessToken();
-    res = await fetch(path, {
-      ...options,
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...(options.headers || {}),
-      },
-    });
+    res = await makeReq(getAccessToken());
   }
   return res;
 }
@@ -49,8 +48,7 @@ export async function saveTopVenuesManage(items) {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    const err = new Error(data.detail || `save ${res.status}`);
-    throw err;
+    throw new Error(data.detail || `save ${res.status}`);
   }
   return res.json();
 }

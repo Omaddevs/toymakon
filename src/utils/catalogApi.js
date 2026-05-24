@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from './authApi';
+import { getAccessToken } from './authApi';
 
 function apiUrl(path) {
   const base = getApiBaseUrl();
@@ -19,9 +20,11 @@ export function unwrapList(data) {
  * @param {RequestInit} [options]
  */
 export async function fetchCatalogJson(path, options = {}) {
+  const token = getAccessToken();
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
   const res = await fetch(apiUrl(path), {
     ...options,
-    headers: { Accept: 'application/json', ...options.headers },
+    headers: { Accept: 'application/json', ...authHeaders, ...options.headers },
   });
   if (!res.ok) {
     const err = new Error(`HTTP ${res.status}`);
@@ -65,4 +68,13 @@ export async function fetchVendors(params = {}) {
 
 export async function fetchVendorByCode(code) {
   return fetchCatalogJson(`/api/vendors/${encodeURIComponent(code)}/`);
+}
+
+export async function recordVendorView(code) {
+  const res = await fetch(apiUrl(`/api/vendors/${encodeURIComponent(code)}/view/`), {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+  });
+  if (!res.ok) return null;
+  return res.json();
 }
