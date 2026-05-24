@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
     setUser(u);
   }, []);
 
-  const register = useCallback(async (usernameRaw, passwordRaw, passwordConfirm) => {
+  const register = useCallback(async (usernameRaw, passwordRaw, passwordConfirm, phone = '') => {
     const vu = validateUsername(usernameRaw);
     if (!vu.ok) throw new Error(vu.code === 'long' ? 'username_too_long' : 'username_invalid');
     const vp = validatePassword(passwordRaw);
@@ -49,6 +49,7 @@ export function AuthProvider({ children }) {
       username: vu.username,
       password: vp.password,
       password_confirm: passwordConfirm,
+      phone: phone.trim(),
     });
     setUser(u);
   }, []);

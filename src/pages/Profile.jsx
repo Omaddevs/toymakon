@@ -1,13 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getReviewsByUsername, deleteUserReview } from '../utils/vendorReviewsStorage';
 import { fetchVendors } from '../utils/catalogApi';
-import {
-  sendOTPRequest,
-  verifyOTPRequest,
-  completeRegistrationRequest,
-} from '../utils/authApi';
 
 // ─── Math CAPTCHA ───
 function useCaptcha() {
@@ -150,20 +145,10 @@ function LoginForm({ onLogin }) {
   );
 }
 
-// ─── Register steps ───
-// Step 1: Enter phone
-// Step 2: Enter OTP code
-// Step 3: Create username + password
-
-function RegisterFlow({ onSuccess }) {
-  const [step, setStep] = useState(1);
-  const [phone, setPhone] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [regToken, setRegToken] = useState('');
-  const [botUsername, setBotUsername] = useState('ayol_karyera_bot');
-  const [botLink, setBotLink] = useState('');
-  const [debugCode, setDebugCode] = useState('');
+// ─── Register Form ───
+function RegisterForm({ onRegister }) {
   const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -172,59 +157,22 @@ function RegisterFlow({ onSuccess }) {
   const [loading, setLoading] = useState(false);
   const { captcha, refresh: refreshCaptcha } = useCaptcha();
 
-  // Step 1: Send OTP
-  const handleSendOTP = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!username.trim()) { setError("Foydalanuvchi nomini kiriting."); return; }
     if (!phone.trim()) { setError("Telefon raqamini kiriting."); return; }
-    setLoading(true);
-    try {
-      const res = await sendOTPRequest(phone.trim());
-      setBotUsername(res.bot_username || 'ayol_karyera_bot');
-      setBotLink(res.bot_link || '');
-      if (res.debug_code) setDebugCode(res.debug_code);
-      setStep(2);
-    } catch (err) {
-      setError(err?.humanMessage || "Xato yuz berdi.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Step 2: Verify OTP
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!otpCode.trim()) { setError("Tasdiqlash kodini kiriting."); return; }
-    setLoading(true);
-    try {
-      const res = await verifyOTPRequest(phone, otpCode.trim());
-      setRegToken(res.reg_token);
-      setStep(3);
-    } catch (err) {
-      setError(err?.humanMessage || "Kod noto'g'ri.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Step 3: Complete registration
-  const handleComplete = async (e) => {
-    e.preventDefault();
-    setError('');
+    if (password.length < 6) { setError("Parol kamida 6 belgidan iborat bo'lishi kerak."); return; }
+    if (password !== password2) { setError(msgForError('mismatch')); return; }
     if (parseInt(captchaVal, 10) !== captcha.answer) {
       setError(msgForError('captcha'));
       refreshCaptcha();
       setCaptchaVal('');
       return;
     }
-    if (!username.trim()) { setError("Foydalanuvchi nomini kiriting."); return; }
-    if (password.length < 6) { setError("Parol kamida 6 belgidan iborat bo'lishi kerak."); return; }
-    if (password !== password2) { setError(msgForError('mismatch')); return; }
     setLoading(true);
     try {
-      await completeRegistrationRequest({ phone, reg_token: regToken, username, password, password_confirm: password2 });
-      onSuccess();
+      await onRegister(username, password, password2, phone);
     } catch (err) {
       setError(err?.humanMessage || msgForError(err?.message || ''));
       refreshCaptcha();
@@ -234,97 +182,8 @@ function RegisterFlow({ onSuccess }) {
     }
   };
 
-  if (step === 1) {
-    return (
-      <form className="auth-form" onSubmit={handleSendOTP} noValidate>
-        <div className="auth-otp-intro">
-          <div className="auth-otp-icon"><i className="ph ph-telegram-logo" /></div>
-          <p>Telefon raqamingizni kiriting. Tasdiqlash kodi Telegram bot orqali yuboriladi.</p>
-        </div>
-        <label className="auth-field">
-          <span className="auth-label">Telefon raqam</span>
-          <div className="auth-input-wrap">
-            <i className="ph ph-phone auth-input-icon" />
-            <input
-              className="auth-input"
-              type="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+998 90 123 45 67"
-              required
-            />
-          </div>
-        </label>
-        {error && <div className="auth-error" role="alert"><i className="ph ph-warning-circle" /> {error}</div>}
-        <button type="submit" className="btn-primary auth-submit" disabled={loading}>
-          {loading ? 'Yuklanmoqda…' : 'Kod olish'}
-        </button>
-      </form>
-    );
-  }
-
-  if (step === 2) {
-    return (
-      <form className="auth-form" onSubmit={handleVerifyOTP} noValidate>
-        <div className="auth-otp-intro">
-          <div className="auth-otp-icon auth-otp-icon--success"><i className="ph ph-telegram-logo" /></div>
-          <p>Telegram botni oching — u sizga <b>6 xonali kod</b> yuboradi.</p>
-        </div>
-        <a
-          href={botLink || `https://t.me/${botUsername}`}
-          target="_blank"
-          rel="noreferrer"
-          className="auth-otp-bot-link auth-otp-bot-link--big"
-        >
-          <i className="ph ph-telegram-logo" /> Telegram botni ochish
-        </a>
-        <p className="auth-otp-step-hint">
-          Botda <b>Start</b> tugmasini bosing — kod avtomatik yuboriladi.
-        </p>
-        {debugCode && (
-          <div className="auth-otp-debug">
-            <i className="ph ph-bug" /> Debug kod: <b>{debugCode}</b>
-          </div>
-        )}
-        <div className="auth-otp-divider">Kodni oldingizmi?</div>
-        <label className="auth-field">
-          <span className="auth-label">Tasdiqlash kodi (6 ta raqam)</span>
-          <div className="auth-input-wrap">
-            <i className="ph ph-key auth-input-icon" />
-            <input
-              className="auth-input"
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-              placeholder="123456"
-              required
-            />
-          </div>
-        </label>
-        {error && <div className="auth-error" role="alert"><i className="ph ph-warning-circle" /> {error}</div>}
-        <button type="submit" className="btn-primary auth-submit" disabled={loading}>
-          {loading ? 'Tekshirilmoqda…' : 'Tasdiqlash'}
-        </button>
-        <button
-          type="button"
-          className="auth-back-btn"
-          onClick={() => { setStep(1); setError(''); setOtpCode(''); }}
-        >
-          <i className="ph ph-arrow-left" /> Orqaga
-        </button>
-      </form>
-    );
-  }
-
   return (
-    <form className="auth-form" onSubmit={handleComplete} noValidate>
-      <div className="auth-otp-intro">
-        <div className="auth-otp-icon auth-otp-icon--done"><i className="ph ph-check-circle" /></div>
-        <p>Telefon <b>{phone}</b> tasdiqlandi! Hisob yarating.</p>
-      </div>
+    <form className="auth-form" onSubmit={handleSubmit} noValidate>
       <label className="auth-field">
         <span className="auth-label">Foydalanuvchi nomi</span>
         <div className="auth-input-wrap">
@@ -341,6 +200,24 @@ function RegisterFlow({ onSuccess }) {
           />
         </div>
       </label>
+
+      <label className="auth-field">
+        <span className="auth-label">Telefon raqam</span>
+        <div className="auth-input-wrap">
+          <i className="ph ph-phone auth-input-icon" />
+          <input
+            className="auth-input"
+            type="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+998 90 123 45 67"
+            maxLength={20}
+            required
+          />
+        </div>
+      </label>
+
       <label className="auth-field">
         <span className="auth-label">Parol</span>
         <div className="auth-input-wrap">
@@ -359,6 +236,7 @@ function RegisterFlow({ onSuccess }) {
           </button>
         </div>
       </label>
+
       <label className="auth-field">
         <span className="auth-label">Parolni tasdiqlang</span>
         <div className="auth-input-wrap">
@@ -374,6 +252,7 @@ function RegisterFlow({ onSuccess }) {
           />
         </div>
       </label>
+
       <label className="auth-field">
         <span className="auth-label">Tasdiqlash</span>
         <CaptchaField
@@ -383,16 +262,23 @@ function RegisterFlow({ onSuccess }) {
           onRefresh={() => { refreshCaptcha(); setCaptchaVal(''); }}
         />
       </label>
-      {error && <div className="auth-error" role="alert"><i className="ph ph-warning-circle" /> {error}</div>}
+
+      {error && (
+        <div className="auth-error" role="alert">
+          <i className="ph ph-warning-circle" /> {error}
+        </div>
+      )}
+
       <button type="submit" className="btn-primary auth-submit" disabled={loading}>
-        {loading ? 'Yaratilmoqda…' : 'Hisob yaratish'}
+        {loading ? 'Yaratilmoqda…' : "Ro'yxatdan o'tish"}
       </button>
     </form>
   );
 }
 
+
 export default function Profile() {
-  const { user, ready, login, logout } = useAuth();
+  const { user, ready, login, register, logout } = useAuth();
   const [mode, setMode] = useState('login');
   const navigate = useNavigate();
   const [activeModal, setActiveModal] = useState(null);
@@ -532,7 +418,7 @@ export default function Profile() {
               {mode === 'login' ? (
                 <LoginForm onLogin={handleLogin} />
               ) : (
-                <RegisterFlow onSuccess={() => {}} />
+                <RegisterForm onRegister={register} />
               )}
 
               <p className="auth-footnote">
