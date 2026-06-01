@@ -287,6 +287,10 @@ function VendorForm({ initial, categories, onSave, onCancel, uploading, onUpload
       const payload = { ...form };
       if (!isEdit) payload.code = genCode(form.name);
       if (!payload.slug) payload.slug = slugify(payload.name);
+      for (const key of ['lat', 'lng']) {
+        const n = parseFloat(payload[key]);
+        payload[key] = Number.isFinite(n) ? n : null;
+      }
       await onSave(payload, isEdit);
     } catch (ex) {
       const d = ex?.data || {};
@@ -1283,12 +1287,18 @@ function TopVenuesTab({ showToast }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [selectedCode, setSelectedCode] = useState('');
+  const [uploadingCode, setUploadingCode] = useState('');
 
   const load = () => {
     setLoading(true);
+    setLoadError('');
     fetchAdminTopVenues()
       .then((d) => { setData(d); setItems(d.items || []); })
-      .catch(() => {})
+      .catch((e) => {
+        setLoadError(e?.message || "Ma'lumotni yuklashda xatolik.");
+      })
       .finally(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
@@ -1301,11 +1311,32 @@ function TopVenuesTab({ showToast }) {
       vendor_name: opt?.name || code,
       sort_order: prev.length,
       story_video_url: '',
+      image: opt?.image || '',
     }]);
+  };
+
+  const handleAddSelected = () => {
+    if (!selectedCode) return;
+    addVenue(selectedCode);
+    setSelectedCode('');
   };
 
   const removeVenue = (code) => setItems((prev) => prev.filter((i) => i.vendor_code !== code));
   const setVideoUrl = (code, url) => setItems((prev) => prev.map((i) => i.vendor_code === code ? { ...i, story_video_url: url } : i));
+  const setImage = (code, url) => setItems((prev) => prev.map((i) => i.vendor_code === code ? { ...i, image: url } : i));
+
+  const handleUploadImage = async (code, file) => {
+    if (!file) return;
+    setUploadingCode(code);
+    try {
+      const res = await uploadAdminImage(file);
+      if (res?.url) setImage(code, res.url);
+    } catch (e) {
+      showToast('Rasm yuklashda xatolik: ' + (e?.message || ''));
+    } finally {
+      setUploadingCode('');
+    }
+  };
 
   const moveUp = (idx) => setItems((prev) => {
     if (idx === 0) return prev;
@@ -1335,9 +1366,31 @@ function TopVenuesTab({ showToast }) {
 
   if (loading) return <div className="admin-loading">Yuklanmoqda…</div>;
 
-  const availableOptions = (data?.venue_options || []).filter(
+  if (loadError) {
+    return (
+      <div>
+        <div className="admin-toolbar">
+          <div>
+            <h3 style={{ margin: 0 }}>Top to'yxonalar</h3>
+          </div>
+        </div>
+        <div className="admin-empty">
+          <i className="ph ph-warning-circle" style={{ fontSize: 40, display: 'block', margin: '0 auto 8px', color: 'var(--danger, #c0392b)' }} />
+          <p>{loadError}</p>
+          <button className="admin-btn admin-btn--primary" style={{ marginTop: 12 }} onClick={load}>
+            <i className="ph ph-arrow-clockwise" /> Qayta urinish
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const allVenueOptions = data?.venue_options || [];
+  const availableOptions = allVenueOptions.filter(
     (v) => !items.find((i) => i.vendor_code === v.code)
   );
+  const noVenuesInSystem = allVenueOptions.length === 0;
+  const allAdded = !noVenuesInSystem && availableOptions.length === 0;
 
   return (
     <div>
@@ -1357,15 +1410,54 @@ function TopVenuesTab({ showToast }) {
         <div className="admin-tv-add">
           <label>To'yxona qo'shish:</label>
           <select
-            defaultValue=""
-            onChange={(e) => { addVenue(e.target.value); e.target.value = ''; }}
+            value={selectedCode}
+            disabled={availableOptions.length === 0}
+            onChange={(e) => setSelectedCode(e.target.value)}
           >
             <option value="">— ro'yxatdan tanlang —</option>
             {availableOptions.map((v) => (
-              <option key={v.code} value={v.code}>{v.name}</option>
+              <option key={v.code} value={v.code}>
+                {v.category ? `${v.name} (${v.category})` : v.name}
+              </option>
             ))}
           </select>
+          <button
+            type="button"
+            className="admin-btn admin-btn--primary admin-tv-add-btn"
+            disabled={!selectedCode}
+            onClick={handleAddSelected}
+          >
+            <i className="ph ph-plus" /> Qo'shish
+          </button>
         </div>
+
+        {noVenuesInSystem ? (
+          <div className="admin-tv-howto">
+            <p style={{ margin: '0 0 6px', fontWeight: 600 }}>
+              <i className="ph ph-info" /> Yangi top to'yxona qo'shish uchun:
+            </p>
+            <ol style={{ margin: '0 0 0 18px', padding: 0, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.7 }}>
+              <li>Chap menyudan <strong>Vendorlar</strong> bo'limiga o'ting.</li>
+              <li>Yangi vendor qo'shing va <strong>"saytda ko'rinsin"</strong> belgisini yoqing.</li>
+              <li>Shu yerga qaytib, ro'yxatdan tanlab <strong>Qo'shish</strong> tugmasini bosing.</li>
+            </ol>
+          </div>
+        ) : allAdded ? (
+          <div className="admin-tv-howto">
+            <p style={{ margin: '0 0 6px', fontWeight: 600 }}>
+              <i className="ph ph-check-circle" /> Barcha mavjud vendorlar allaqachon qo'shilgan.
+            </p>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.7 }}>
+              Yana qo'shmoqchi bo'lsangiz, avval <strong>Vendorlar</strong> bo'limidan
+              yangi vendor yarating va uni <strong>"saytda ko'rinsin"</strong> qilib belgilang —
+              keyin u shu ro'yxatda paydo bo'ladi.
+            </p>
+          </div>
+        ) : (
+          <p className="admin-tv-hint" style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 12px' }}>
+            Ro'yxatdan tanlang va <strong>Qo'shish</strong> tugmasini bosing.
+          </p>
+        )}
 
         {items.length === 0 ? (
           <div className="admin-empty">
@@ -1377,16 +1469,50 @@ function TopVenuesTab({ showToast }) {
             {items.map((item, idx) => (
               <div key={item.vendor_code} className="admin-tv-item">
                 <div className="admin-tv-order">#{idx + 1}</div>
+                {item.image ? (
+                  <img className="admin-tv-thumb" src={item.image} alt="" />
+                ) : (
+                  <div className="admin-tv-thumb admin-tv-thumb--empty">
+                    <i className="ph ph-image" />
+                  </div>
+                )}
                 <div className="admin-tv-info">
                   <div className="admin-tv-name">{item.vendor_name || item.vendor_code}</div>
+
                   <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>
-                    Story uchun YouTube video:
+                    Story doirasi rasmi:
+                  </label>
+                  <div className="admin-tv-img-row">
+                    <input
+                      className="admin-tv-video"
+                      value={item.image || ''}
+                      onChange={(e) => setImage(item.vendor_code, e.target.value)}
+                      placeholder="Rasm URL manzili…"
+                    />
+                    <label className={`admin-upload-btn ${uploadingCode === item.vendor_code ? 'is-loading' : ''}`}>
+                      <i className="ph ph-upload-simple" /> {uploadingCode === item.vendor_code ? 'Yuklanmoqda…' : 'Yuklash'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        disabled={uploadingCode === item.vendor_code}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleUploadImage(item.vendor_code, file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <label style={{ fontSize: 12, color: 'var(--text-muted)', margin: '10px 0 4px', display: 'block' }}>
+                    Story uchun YouTube video (ixtiyoriy):
                   </label>
                   <input
                     className="admin-tv-video"
                     value={item.story_video_url || ''}
                     onChange={(e) => setVideoUrl(item.vendor_code, e.target.value)}
-                    placeholder="https://youtu.be/… (ixtiyoriy)"
+                    placeholder="https://youtu.be/…"
                   />
                 </div>
                 <div className="admin-tv-controls">

@@ -1,5 +1,5 @@
 import { fetchCatalogJson } from './catalogApi';
-import { getAccessToken, getApiBaseUrl } from './authApi';
+import { getAccessToken, getApiBaseUrl, tryRefreshAccess } from './authApi';
 
 function apiUrl(path) {
   const base = getApiBaseUrl();
@@ -8,8 +8,7 @@ function apiUrl(path) {
 }
 
 async function adminFetch(path, options = {}) {
-  const token = getAccessToken();
-  const res = await fetch(apiUrl(path), {
+  const makeReq = (token) => fetch(apiUrl(path), {
     ...options,
     headers: {
       Accept: 'application/json',
@@ -17,6 +16,15 @@ async function adminFetch(path, options = {}) {
       ...options.headers,
     },
   });
+
+  let res = await makeReq(getAccessToken());
+  // Access token muddati tugagan bo'lsa — bir marta refresh qilib qayta urinamiz.
+  if (res.status === 401) {
+    const refreshed = await tryRefreshAccess();
+    if (refreshed) {
+      res = await makeReq(getAccessToken());
+    }
+  }
   if (!res.ok) {
     let errData = {};
     try { errData = await res.json(); } catch { /* ignore */ }

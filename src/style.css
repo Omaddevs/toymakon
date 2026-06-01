@@ -3614,7 +3614,49 @@ html, body {
   flex: 1;
 }
 
+.admin-tv-add select:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.admin-tv-add-btn { white-space: nowrap; }
+
+.admin-tv-howto {
+  background: #f8f9fb;
+  border: 1px solid #e9ecef;
+  border-left: 3px solid var(--primary, #8e2433);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+
+.admin-tv-howto p { color: var(--text-dark); }
+
 .admin-tv-list { display: flex; flex-direction: column; gap: 10px; }
+
+.admin-tv-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #e9ecef;
+  background: #f1f3f5;
+}
+
+.admin-tv-thumb--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #adb5bd;
+  font-size: 22px;
+}
+
+.admin-tv-img-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-tv-img-row .admin-tv-video { flex: 1; }
+.admin-tv-img-row .admin-upload-btn.is-loading { opacity: 0.7; pointer-events: none; }
 
 .admin-tv-item {
   background: #fff;

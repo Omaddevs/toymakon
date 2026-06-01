@@ -31,13 +31,7 @@ function extractYoutubeVideoId(rawUrl) {
 function youtubeEmbedUrl(rawUrl) {
   const videoId = extractYoutubeVideoId(rawUrl);
   if (!videoId) return '';
-  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0&modestbranding=1&controls=1`;
-}
-
-function youtubePosterUrl(rawUrl) {
-  const videoId = extractYoutubeVideoId(rawUrl);
-  if (!videoId) return '';
-  return `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/hqdefault.jpg`;
+  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&rel=0&modestbranding=1&controls=1`;
 }
 
 export default function Home() {
@@ -54,7 +48,6 @@ export default function Home() {
   const [home, setHome] = useState(null);
   const [vendorsByCategory, setVendorsByCategory] = useState({});
   const [storyVideo, setStoryVideo] = useState(null);
-  const [storyPlaying, setStoryPlaying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,10 +108,6 @@ export default function Home() {
     };
   }, [storyVideo]);
 
-  useEffect(() => {
-    if (!storyVideo) setStoryPlaying(false);
-  }, [storyVideo]);
-
   const openNotifications = () => {
     if (!user) {
       afterAuthRef.current = () => openInbox();
@@ -146,7 +135,6 @@ export default function Home() {
   };
 
   const storyEmbed = youtubeEmbedUrl(storyVideo?.storyVideoUrl);
-  const storyPoster = youtubePosterUrl(storyVideo?.storyVideoUrl);
 
   if (loading) {
     return (
@@ -444,26 +432,12 @@ export default function Home() {
               Orqaga
             </button>
             <div className="story-video-frame-wrap">
-              {!storyPlaying ? (
-                <button
-                  type="button"
-                  className="story-video-poster"
-                  aria-label="Videoni boshlash"
-                  onClick={() => setStoryPlaying(true)}
-                >
-                  {storyPoster ? <img src={storyPoster} alt={storyVideo.name} /> : null}
-                  <span className="story-video-poster-play" aria-hidden>
-                    <i className="ph-fill ph-play"></i>
-                  </span>
-                </button>
-              ) : (
-                <iframe
-                  src={storyEmbed}
-                  title={`${storyVideo.name} video`}
-                  allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-                  allowFullScreen
-                />
-              )}
+              <iframe
+                src={storyEmbed}
+                title={`${storyVideo.name} video`}
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowFullScreen
+              />
             </div>
             <div className="story-video-title">{storyVideo.name}</div>
           </div>
